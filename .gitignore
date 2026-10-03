@@ -1,6 +1,4 @@
 node_modules/
 .tools/
 .runs/
-results/*.jsonl
-!results/.gitkeep
 .env

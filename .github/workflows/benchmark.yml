@@ -1,0 +1,155 @@
+name: Benchmark
+
+# Runs every task for every setup, one setup per job in parallel, then
+# publishes results/<date>-run-<id>/ (raw data, meta.json, report.md),
+# the results index and the README's "Latest results" section.
+#
+# Versions accept anything npm does: an exact version, a dist-tag
+# (latest, next) or a range. The report records the exact version that ran.
+
+on:
+  workflow_dispatch:
+    inputs:
+      webdriverio:
+        description: '@wdio/cli version for wdio session'
+        default: latest
+      wdio-mcp:
+        description: '@wdio/mcp version'
+        default: latest
+      playwright-mcp:
+        description: '@playwright/mcp version'
+        default: latest
+      stagehand-mcp:
+        description: '@browserbasehq/stagehand-mcp version'
+        default: latest
+      model:
+        description: Claude model for every agent
+        default: claude-sonnet-5
+      runs:
+        description: Runs per task and setup
+        default: '3'
+      setups:
+        description: Comma-separated setup ids, or "all"
+        default: all
+      tasks:
+        description: Comma-separated task ids, or "all"
+        default: all
+      seed:
+        description: Seed for the run order
+        default: '1'
+      publish:
+        description: Commit the results to the repository
+        type: boolean
+        default: true
+
+concurrency:
+  group: benchmark
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      setups: ${{ steps.plan.outputs.setups }}
+      result-id: ${{ steps.plan.outputs.result-id }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: plan
+        env:
+          SETUPS: ${{ inputs.setups }}
+        run: |
+          setups=$(node src/plan.ts "$SETUPS")
+          echo "setups=$setups" >> "$GITHUB_OUTPUT"
+          echo "result-id=$(date -u +%Y-%m-%d)-run-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+
+  bench:
+    name: ${{ matrix.setup }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        setup: ${{ fromJSON(needs.plan.outputs.setups) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run selftest
+      - name: Run benchmark
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WDIO_VERSION: ${{ inputs.webdriverio }}
+          WDIO_MCP_VERSION: ${{ inputs.wdio-mcp }}
+          PLAYWRIGHT_MCP_VERSION: ${{ inputs.playwright-mcp }}
+          STAGEHAND_MCP_VERSION: ${{ inputs.stagehand-mcp }}
+          SETUP: ${{ matrix.setup }}
+          TASKS: ${{ inputs.tasks }}
+          RUNS: ${{ inputs.runs }}
+          MODEL: ${{ inputs.model }}
+          SEED: ${{ inputs.seed }}
+          OUT_DIR: results/${{ needs.plan.outputs.result-id }}
+        run: node src/run.ts --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --out-dir "$OUT_DIR"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-${{ matrix.setup }}
+          path: results/${{ needs.plan.outputs.result-id }}
+          if-no-files-found: warn
+
+  publish:
+    name: Publish results
+    needs: [plan, bench]
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: results-*
+          merge-multiple: true
+          path: results/${{ needs.plan.outputs.result-id }}
+      - name: Write report
+        env:
+          RESULT_ID: ${{ needs.plan.outputs.result-id }}
+        run: |
+          node src/publish.ts "results/$RESULT_ID"
+          cat "results/$RESULT_ID/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit results
+        if: ${{ inputs.publish }}
+        env:
+          RESULT_ID: ${{ needs.plan.outputs.result-id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results README.md
+          git commit -m "results: $RESULT_ID" -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          for _ in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.publish }}
+        with:
+          name: report
+          path: results/${{ needs.plan.outputs.result-id }}

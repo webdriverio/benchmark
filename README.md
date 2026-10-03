@@ -4,15 +4,21 @@ How much does it cost a coding agent to get a browser task done, and does it get
 
 This repository runs the eight tasks from Stagehand's study [Why Playwright MCP Uses So Many Tokens](https://www.stagehand.dev/blog/playwright-mcp-token-usage) (Sep 29, 2026) against five browser tool setups, with the same model, the same agent harness and the same prompts:
 
-| Setup | What the agent gets |
-|---|---|
-| `playwright-mcp` | [Playwright MCP](https://github.com/microsoft/playwright-mcp) 0.0.82, default config |
-| `playwright-mcp-tuned` | Playwright MCP 0.0.82 with `--snapshot-mode none --codegen none` |
-| `stagehand` | Stagehand's Claude Code MCP server (`run`, `snapshot`, `screenshot`) |
-| `wdio-mcp` | [`@wdio/mcp`](https://www.npmjs.com/package/@wdio/mcp) 3.14.0 |
-| `wdio-session` | [`wdio session`](https://webdriver.io/docs/session) shell commands plus its agent skill |
+| Setup | What the agent gets | npm package |
+|---|---|---|
+| `playwright-mcp` | [Playwright MCP](https://github.com/microsoft/playwright-mcp), default config | `@playwright/mcp` |
+| `playwright-mcp-tuned` | Playwright MCP with `--snapshot-mode none --codegen none` | `@playwright/mcp` |
+| `stagehand` | Stagehand's Claude Code MCP server (`run`, `snapshot`, `screenshot`) | `@browserbasehq/stagehand-mcp` |
+| `wdio-mcp` | [WebdriverIO MCP](https://webdriver.io/docs/mcp) | `@wdio/mcp` |
+| `wdio-session` | [`wdio session`](https://webdriver.io/docs/session) shell commands plus its agent skill | `@wdio/cli` |
 
 The first three are the setups from Stagehand's post. We run them ourselves instead of copying their numbers, because results depend on the machine, the network and the versions.
+
+## Latest results
+
+<!-- results:start -->
+No published run yet. Start one from the [Benchmark workflow](../../actions/workflows/benchmark.yml).
+<!-- results:end -->
 
 ## What is measured
 
@@ -51,12 +57,41 @@ Every agent ends with a line `ANSWER: <json>`. `npm run selftest` checks the che
 - **Same prompts:** one system prompt for everyone. A setup only adds one sentence on how to reach the browser ([`src/setups.ts`](src/setups.ts)).
 - **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. `wdio-session` gets `Bash` restricted to `wdio session …` plus `Skill` and `Read`. Permission mode `dontAsk` denies everything else.
 - **Headless everywhere,** a fresh working directory per run, and the page state is reset before each run.
-- **Randomized order** with a fixed seed (`--seed`), so a run can be reproduced and no setup always runs first or last.
+- **Same machine type, no queueing:** in the workflow every setup runs in its own job on a fresh GitHub-hosted runner, all in parallel. Within a job the runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
+- **Exact versions:** every tool is installed before the first run, so install time never counts, and dist-tags like `latest` are resolved and recorded in the report.
 - **Everything is published:** code, prompts, checks and the raw JSONL of every run.
 
 If you work on one of these tools and think we set it up wrong, please open an issue or a PR. We'd rather fix the setup than win on a technicality.
 
-## Running it
+## Running the benchmark
+
+### In GitHub Actions
+
+Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run workflow**. Every input has a default:
+
+| Input | Default | What it does |
+|---|---|---|
+| `webdriverio` | `latest` | `@wdio/cli` version for `wdio-session` |
+| `wdio-mcp` | `latest` | `@wdio/mcp` version |
+| `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
+| `stagehand-mcp` | `latest` | `@browserbasehq/stagehand-mcp` version |
+| `model` | `claude-sonnet-5` | model for every agent |
+| `runs` | `3` | runs per task and setup |
+| `setups`, `tasks` | `all` | comma-separated ids to run a subset |
+| `seed` | `1` | seed for the run order |
+| `publish` | on | commit the results to this repository |
+
+Versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose package can't be installed is skipped, and the report says why.
+
+The workflow runs one job per setup in parallel, then a publish job:
+
+1. writes `results/<date>-run-<id>/` with the raw `runs-*.jsonl`, the merged `meta.json` and a `report.md` (tool versions, configuration, results, every failed run, environment, and a link to the workflow run),
+2. updates the [index of all runs](results/README.md) and the **Latest results** section above,
+3. commits and pushes that as `results: <id>`.
+
+The report also appears on the workflow run's summary page. The workflow needs an `ANTHROPIC_API_KEY` repository secret.
+
+### Locally
 
 Requires Node.js 24 and Chrome. The Agent SDK picks up your Anthropic credentials (`ANTHROPIC_API_KEY` or an `ant auth login` profile).
 
@@ -64,33 +99,32 @@ Requires Node.js 24 and Chrome. The Agent SDK picks up your Anthropic credential
 npm install
 npm run selftest                                   # checks the checks, no model calls
 
-# which WebdriverIO to test: a published version, or a local build of webdriverio/webdriverio
-export WDIO_SOURCE=npm:10.0.0
-export WDIO_SOURCE=local:/path/to/webdriverio
-
 npm run bench -- --dry-run                         # print the shuffled plan
 npm run bench -- --setups wdio-session,playwright-mcp --tasks saucedemo-checkout --runs 1
 npm run bench                                      # everything: 5 setups × 8 tasks × 3 runs
-npm run report                                     # tables from results/*.jsonl
+node src/publish.ts results/<id>                   # report.md, results index, README section
 ```
 
-Options: `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--max-turns` (default 80), `--timeout-min` (default 10).
+Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` and `STAGEHAND_MCP_VERSION` (default `latest` each). To test unreleased code:
+
+```sh
+export WDIO_LOCAL=/path/to/webdriverio                        # a built checkout of webdriverio/webdriverio
+export STAGEHAND_MCP="node /path/to/stagehand-mcp/dist/index.js"  # a local Stagehand MCP build
+```
+
+Runner options: `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10).
 
 A full run is 120 agent runs. At Stagehand's reported $0.026–$0.051 per task, expect roughly $5–10 in model costs.
 
 ### Stagehand
 
-Stagehand's Claude Code integration runs `@browserbasehq/stagehand-mcp`, which is [not published to npm yet](https://github.com/browserbase/stagehand/pull/2971). Until it is, build it from [browserbase/stagehand](https://github.com/browserbase/stagehand) and point the benchmark at it:
-
-```sh
-export STAGEHAND_MCP="node /path/to/stagehand-mcp/dist/index.js"
-```
+Stagehand's Claude Code integration runs `@browserbasehq/stagehand-mcp`, which is [not published to npm yet](https://github.com/browserbase/stagehand/pull/2971). Until it is, the workflow skips the `stagehand` setup; locally, build it from [browserbase/stagehand](https://github.com/browserbase/stagehand) and set `STAGEHAND_MCP`.
 
 If Stagehand's tools call a model of their own, those tokens do not show up in the Agent SDK's usage. We will measure and report them separately before publishing any comparison.
 
 ## Known gaps
 
-From driving the local pages by hand with `wdio session` (`WDIO_SOURCE` = the `v10` branch):
+From driving the local pages by hand with `wdio session` (`WDIO_LOCAL` = the `v10` branch):
 
 - `closed-shadow`: the snapshot walks `element.shadowRoot`, which is `null` for closed roots, so the coupon field gets no ref.
 - `icon-no-role`: an element only counts as clickable with an `onclick` attribute and `cursor: pointer`, so icons wired up with `addEventListener` get no ref.
@@ -101,12 +135,15 @@ We will fix both gaps in WebdriverIO before publishing results, and say so in th
 ## Layout
 
 ```
-src/run.ts        runner: plan, Agent SDK query per run, JSONL results
+.github/workflows/benchmark.yml   the benchmark workflow
+src/run.ts        runner: installs tools, runs the plan, writes runs-*.jsonl and meta-*.json
 src/setups.ts     the five tool setups
+src/tools.ts      installs and pins the npm package behind each setup
 src/tasks.ts      the eight tasks and their checks
 src/sites.ts      local test page server (two origins)
-src/report.ts     Markdown tables from results/*.jsonl
+src/report.ts     Markdown tables from run results
+src/publish.ts    report.md, results index and README section for a result directory
 src/selftest.ts   checks the checks without a model
 sites/pages/      the four local test pages
-results/          one JSONL file per benchmark run
+results/          one directory per benchmark run
 ```
