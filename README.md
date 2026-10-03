@@ -18,19 +18,20 @@ The first three are the setups from Stagehand's post. We run them ourselves inst
 ## Latest results
 
 <!-- results:start -->
-Latest run: [2026-10-03-run-37156195130](results/2026-10-03-run-37156195130/report.md) on 2026-10-03, `claude-sonnet-5`, 3 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37156195130). All runs: [results](results/README.md).
+Latest run: [2026-10-03-run-37159064984](results/2026-10-03-run-37159064984/report.md) on 2026-10-03, `claude-sonnet-5`, 3 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37159064984). All runs: [results](results/README.md).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 93k | $0.043 | 100% (24/24) | 23 s | 9 |
-| playwright-mcp-tuned | 88k | $0.044 | 100% (24/24) | 21 s | 9 |
-| stagehand | 62k | $0.038 | 100% (24/24) | 18 s | 8 |
-| wdio-mcp | 199k | $0.070 | 100% (24/24) | 19 s | 13.5 |
-| wdio-session | 77k | $0.040 | 100% (24/24) | 21 s | 6.5 |
+| playwright-mcp | 92k | $0.052 | 100% (24/24) | 25 s | 8.5 |
+| playwright-mcp-tuned | 100k | $0.055 | 100% (24/24) | 22 s | 8.5 |
+| stagehand | 34k | $0.029 | 92% (22/24) | 15 s | 6 |
+| wdio-mcp | 67k | $0.033 | 100% (24/24) | 15 s | 6 |
+| wdio-session | 71k | $0.038 | 100% (24/24) | 21 s | 6 |
+| agent-browser | 117k | $0.059 | 100% (24/24) | 21 s | 9 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
-Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@3.14.0` · wdio-session: `@wdio/cli@10.0.0-alpha.155`
+Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.56` · wdio-session: `@wdio/cli@10.0.0-alpha.155` · agent-browser: `agent-browser@0.38.2`
 <!-- results:end -->
 
 ## What is measured
