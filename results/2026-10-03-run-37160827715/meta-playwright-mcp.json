@@ -1,0 +1,38 @@
+{
+  "startedAt": "2026-10-03T23:14:34.338Z",
+  "model": "claude-sonnet-5",
+  "runsPerTask": 3,
+  "seed": 1,
+  "maxTurns": 80,
+  "timeoutMin": 10,
+  "tasks": [
+    "saucedemo-checkout",
+    "books-cheapest",
+    "wikipedia-hops",
+    "nodejs-docs-fact",
+    "iframe-form",
+    "closed-shadow",
+    "icon-no-role",
+    "long-form"
+  ],
+  "setups": {
+    "playwright-mcp": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    }
+  },
+  "workflowRun": {
+    "url": "https://github.com/webdriverio/benchmark/actions/runs/37160827715",
+    "id": "37160827715",
+    "attempt": "1"
+  },
+  "commit": "a3f6c1c96c2438d8a345d6b5afd4ba1f3376393c",
+  "environment": {
+    "os": "Linux 6.17.0-1022-azure (x64)",
+    "cpus": "4× AMD EPYC 9V45 96-Core Processor",
+    "node": "v24.21.0",
+    "chrome": "Google Chrome 154.0.8037.57",
+    "agentSdk": "0.3.288"
+  }
+}
