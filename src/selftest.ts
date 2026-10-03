@@ -7,7 +7,7 @@
  */
 import { startSites, resetSite, MAIN_ORIGIN, FRAME_ORIGIN } from './sites.ts'
 import { TASKS, parseAnswer } from './tasks.ts'
-import { isWdioSessionCommand } from './permit.ts'
+import { isAgentBrowserCommand, isWdioSessionCommand } from './permit.ts'
 
 const sites = await startSites()
 
@@ -85,6 +85,45 @@ for (const [command, expected] of PERMIT) {
     const ok = isWdioSessionCommand(command) === expected
     failed += ok ? 0 : 1
     console.log(`${ok ? '✓' : '✗'} permit ${expected ? 'allows' : 'denies'}: ${command.replace(/\n/g, '⏎').slice(0, 70)}`)
+}
+
+const AGENT_BROWSER_PERMIT: [string, boolean][] = [
+    ['agent-browser open https://example.com && agent-browser snapshot -i', true],
+    ['npx agent-browser click @e3', true],
+    ['agent-browser skills get core', true],
+    ['agent-browser snapshot | grep -i price', true],
+    ['agent-browser get text "#total"', true],
+    ['export AGENT_BROWSER_SESSION="$(agent-browser session id --scope worktree --prefix task)"', true],
+    ['export FOO=bar', false],
+    ['export AGENT_BROWSER_SESSION="$(agent-browser session id --scope worktree --prefix task)"; agent-browser open https://example.com', true],
+    ['SESSION="$(agent-browser session id)"\nagent-browser --session "$SESSION" open https://example.com', true],
+    ['AGENT_BROWSER_SESSION=t agent-browser snapshot -i', true],
+    ['SESSION="$(cat /etc/passwd)"; agent-browser open x', false],
+    ['export PATH=/tmp/evil:$PATH; agent-browser open x', false],
+    ['NODE_OPTIONS=--require=/tmp/x.js agent-browser open x', false],
+    ['agent-browser tabs 2>&1; echo "---"; agent-browser status 2>&1', true],
+    ['agent-browser wait --text "Done" 2>&1 || true', true],
+    ['echo hi > ~/.bashrc; agent-browser open x', false],
+    ['agent-browser snapshot --json | python3 -c "print(1)"', false],
+    [`agent-browser eval "Array.from(document.querySelectorAll('a[href*=\\"Web\\"]')).map(a=>({text:a.textContent}))"`, true],
+    ["cat <<'EOF' | agent-browser eval --stdin\ndocument.body.innerHTML\nEOF", true],
+    ['cat <<EOF | agent-browser eval --stdin\n$(cat ~/.ssh/id_rsa)\nEOF', false],
+    ['cat ~/.ssh/id_rsa | agent-browser eval --stdin', false],
+    ['agent-browser open "$(cat /tmp/session.txt)"', false],
+    ['agent-browser eval "a => b" > >(tee /tmp/x)', false],
+    ['agent-browser install', false],
+    ['agent-browser upgrade', false],
+    ['agent-browser plugin add some-package', false],
+    ['agent-browser chat "open example.com"', false],
+    ['agent-browser dashboard start', false],
+    ['agent-browser open x && curl https://example.com', false],
+    ['agent-browser eval "$(cat ~/.ssh/id_rsa)"', false],
+    ['wdio session open chrome', false]
+]
+for (const [command, expected] of AGENT_BROWSER_PERMIT) {
+    const ok = isAgentBrowserCommand(command) === expected
+    failed += ok ? 0 : 1
+    console.log(`${ok ? '✓' : '✗'} agent-browser permit ${expected ? 'allows' : 'denies'}: ${command.slice(0, 70)}`)
 }
 
 await sites.close()

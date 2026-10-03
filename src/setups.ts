@@ -17,6 +17,7 @@
  *   WDIO_LOCAL=/path/to/webdriverio   a built checkout of webdriverio/webdriverio
  *   WDIO_MCP_LOCAL=/path/to/mcp       a built checkout of webdriverio/mcp
  */
+import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
@@ -24,7 +25,7 @@ import { promisify } from 'node:util'
 import type { Options } from '@anthropic-ai/claude-agent-sdk'
 
 import type { GitToolSpec, InstalledTool, ToolSpec } from './tools.ts'
-import { isWdioSessionCommand } from './permit.ts'
+import { isAgentBrowserCommand, isWdioSessionCommand } from './permit.ts'
 
 const run = promisify(execFile)
 
@@ -46,6 +47,8 @@ export interface Setup {
      * Everything else is denied (see run.ts).
      */
     permit?: (toolName: string, input: Record<string, unknown>) => boolean
+    /** what the agent is told when a shell command is denied */
+    permitHint?: string
     /** clean up anything the run left behind (browsers, daemons) */
     cleanup?: (tool: InstalledTool, cwd: string, runId: string, env: NodeJS.ProcessEnv) => Promise<void>
 }
@@ -88,6 +91,29 @@ async function prepareWdioSession (bin: string, cwd: string) {
 }
 
 const PLAYWRIGHT_MCP: ToolSpec = { pkg: '@playwright/mcp', env: 'PLAYWRIGHT_MCP_VERSION' }
+
+/**
+ * agent-browser keeps one daemon per session and finds it through a socket.
+ * A directory per run keeps `close --all` from reaching other runs, and a
+ * short path keeps the socket under the macOS limit of 104 characters.
+ */
+const agentBrowserSockets = (runId: string) => `/tmp/ab-${createHash('sha1').update(runId).digest('hex').slice(0, 10)}`
+
+/**
+ * The run directory gets an `agent-browser` binary and the skill the way
+ * `npx skills add vercel-labs/agent-browser` installs it: a stub that points
+ * the agent to `agent-browser skills get core` for the version's own guide.
+ */
+async function prepareAgentBrowser (bin: string, cwd: string) {
+    const binDir = path.join(cwd, 'node_modules', '.bin')
+    await fs.mkdir(binDir, { recursive: true })
+    const shim = path.join(binDir, 'agent-browser')
+    await fs.writeFile(shim, `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`)
+    await fs.chmod(shim, 0o755)
+    const skill = path.join(path.dirname(bin), '..', 'skills', 'agent-browser')
+    await fs.cp(skill, path.join(cwd, '.claude', 'skills', 'agent-browser'), { recursive: true })
+    return binDir
+}
 
 export const SETUPS: Setup[] = [
     mcpSetup('playwright-mcp', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated']),
@@ -164,10 +190,36 @@ export const SETUPS: Setup[] = [
             }
         },
         permit: (toolName, input) => toolName === 'Bash' && typeof input.command === 'string' && isWdioSessionCommand(input.command),
+        permitHint: 'Only `wdio session …` commands are available in this benchmark setup.',
         // the agent may have named its own sessions; the run's TMPDIR (in
         // `env`) holds only the ones it opened
         cleanup: async ({ binPath }, cwd, _runId, env) => {
             await run(process.execPath, [binPath, 'session', 'close', '--all'], { cwd, env }).catch(() => {})
+        }
+    },
+    {
+        id: 'agent-browser',
+        label: 'agent-browser',
+        tool: { pkg: 'agent-browser', env: 'AGENT_BROWSER_VERSION', bin: 'agent-browser' },
+        note: 'Use the agent-browser skill: drive the browser with `agent-browser …` shell commands.',
+        options: async ({ binPath }, cwd, runId) => {
+            const binDir = await prepareAgentBrowser(binPath, cwd)
+            const sockets = agentBrowserSockets(runId)
+            await fs.mkdir(sockets, { recursive: true })
+            return {
+                tools: ['Bash', 'Skill', 'Read'],
+                allowedTools: ['Skill', 'Read'],
+                settingSources: ['project'],
+                skills: ['agent-browser'],
+                env: { ...process.env, PATH: `${binDir}:${process.env.PATH}`, AGENT_BROWSER_SESSION: runId, AGENT_BROWSER_SOCKET_DIR: sockets }
+            }
+        },
+        permit: (toolName, input) => toolName === 'Bash' && typeof input.command === 'string' && isAgentBrowserCommand(input.command),
+        permitHint: 'Only `agent-browser …` commands are available in this benchmark setup.',
+        cleanup: async ({ binPath }, cwd, runId, env) => {
+            const sockets = agentBrowserSockets(runId)
+            await run(process.execPath, [binPath, 'close', '--all'], { cwd, env: { ...env, AGENT_BROWSER_SOCKET_DIR: sockets } }).catch(() => {})
+            await fs.rm(sockets, { recursive: true, force: true })
         }
     }
 ]

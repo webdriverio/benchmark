@@ -19,6 +19,9 @@ on:
       playwright-mcp:
         description: '@playwright/mcp version'
         default: latest
+      agent-browser:
+        description: 'agent-browser version'
+        default: latest
       stagehand:
         description: 'browserbase/stagehand git ref (branch, tag or sha) to build its Claude Code MCP server from; latest = newest release tag'
         default: latest
@@ -95,6 +98,7 @@ jobs:
           WDIO_MCP_VERSION: ${{ inputs.wdio-mcp }}
           PLAYWRIGHT_MCP_VERSION: ${{ inputs.playwright-mcp }}
           STAGEHAND_REF: ${{ inputs.stagehand }}
+          AGENT_BROWSER_VERSION: ${{ inputs.agent-browser }}
           SETUP: ${{ matrix.setup }}
           TASKS: ${{ inputs.tasks }}
           RUNS: ${{ inputs.runs }}

@@ -236,7 +236,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
                             const toolInput = (input as { tool_input?: Record<string, unknown> }).tool_input ?? {}
                             return setup.permit!('Bash', toolInput)
                                 ? {}
-                                : { hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: 'Only `wdio session …` commands are available in this benchmark setup.' } }
+                                : { hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: setup.permitHint ?? 'This command is not available in this benchmark setup.' } }
                         }]
                     }]
                 } : undefined,

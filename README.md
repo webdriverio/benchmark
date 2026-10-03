@@ -2,7 +2,7 @@
 
 How much does it cost a coding agent to get a browser task done, and does it get it right?
 
-This repository runs the eight tasks from Stagehand's study [Why Playwright MCP Uses So Many Tokens](https://www.stagehand.dev/blog/playwright-mcp-token-usage) (Sep 29, 2026) against five browser tool setups, with the same model, the same agent harness and the same prompts:
+This repository runs the eight tasks from Stagehand's study [Why Playwright MCP Uses So Many Tokens](https://www.stagehand.dev/blog/playwright-mcp-token-usage) (Sep 29, 2026) against six browser tool setups, with the same model, the same agent harness and the same prompts:
 
 | Setup | What the agent gets | npm package |
 |---|---|---|
@@ -11,6 +11,7 @@ This repository runs the eight tasks from Stagehand's study [Why Playwright MCP 
 | `stagehand` | Stagehand's Claude Code MCP server (`run`, `snapshot`, `screenshot`) with its agent instructions | built from [`browserbase/stagehand`](https://github.com/browserbase/stagehand) |
 | `wdio-mcp` | [WebdriverIO MCP](https://webdriver.io/docs/mcp) | `@wdio/mcp` |
 | `wdio-session` | [`wdio session`](https://webdriver.io/docs/session) shell commands plus its agent skill | `@wdio/cli` |
+| `agent-browser` | [agent-browser](https://github.com/vercel-labs/agent-browser) shell commands plus its agent skill, installed as `npx skills add vercel-labs/agent-browser` does | `agent-browser` |
 
 The first three are the setups from Stagehand's post. We run them ourselves instead of copying their numbers, because results depend on the machine, the network and the versions.
 
@@ -85,9 +86,10 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 
 | Input | Default | What it does |
 |---|---|---|
-| `webdriverio` | `latest` | `@wdio/cli` version for `wdio-session` |
-| `wdio-mcp` | `latest` | `@wdio/mcp` version |
+| `webdriverio` | `10.0.0-alpha.155` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
+| `wdio-mcp` | `4.0.0-dev.56` | `@wdio/mcp` version |
 | `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
+| `agent-browser` | `latest` | `agent-browser` version |
 | `stagehand` | `latest` | git ref of `browserbase/stagehand` to build (branch, tag or sha); `latest` is the newest `@browserbasehq/stagehand@x.y.z` release tag |
 | `model` | `claude-sonnet-5` | model for every agent |
 | `runs` | `3` | runs per task and setup |
@@ -120,7 +122,7 @@ npm run bench                                      # everything: 5 setups × 8 t
 node src/publish.ts results/<id>                   # report.md, results index, README section
 ```
 
-Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` and `STAGEHAND_REF` (default `latest`, except `WDIO_VERSION`: `10.0.0-alpha.155`, since `wdio session` ships with v10, and `WDIO_MCP_VERSION`: `4.0.0-dev.56`, a dev build of the MCP server with the `@wdio/session` page model). To test an unreleased WebdriverIO:
+Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `AGENT_BROWSER_VERSION` and `STAGEHAND_REF` (default `latest`, except `WDIO_VERSION`: `10.0.0-alpha.155`, since `wdio session` ships with v10, and `WDIO_MCP_VERSION`: `4.0.0-dev.56`, a dev build of the MCP server with the `@wdio/session` page model). To test an unreleased WebdriverIO:
 
 ```sh
 export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio
@@ -170,7 +172,7 @@ We will fix both gaps in WebdriverIO before publishing results, and say so in th
 .github/workflows/benchmark.yml   the benchmark workflow
 vercel.json                       Vercel build settings for benchmark.webdriver.io
 src/run.ts        runner: installs tools, runs the plan, writes runs-*.jsonl and meta-*.json
-src/setups.ts     the five tool setups
+src/setups.ts     the six tool setups
 src/tools.ts      installs and pins the npm package behind each setup
 src/tasks.ts      the eight tasks and their checks
 src/sites.ts      local test page server (two origins)
