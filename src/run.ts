@@ -315,12 +315,16 @@ console.log(`\nResults in ${path.relative(ROOT, outDir)}\nPublish: node src/publ
 /**
  * Browsers that are killed instead of closed leave their profile (100+ MB)
  * in TMPDIR. Pointing the agent and its MCP servers at a directory inside the
- * run directory removes them together with the run.
+ * run directory removes them together with the run. Downloaded drivers stay
+ * in the shared cache: WebdriverIO keeps them in TMPDIR unless
+ * WEBDRIVER_CACHE_DIR says otherwise, and a download in every run would be
+ * counted as the tool's time.
  */
 function withTmpDir<T extends { env?: Record<string, string | undefined>, mcpServers?: Record<string, unknown> }> (options: T, tmp: string): T {
+    const vars = { TMPDIR: tmp, WEBDRIVER_CACHE_DIR: process.env.WEBDRIVER_CACHE_DIR || os.tmpdir() }
     const mcpServers = Object.fromEntries(Object.entries(options.mcpServers ?? {}).map(([name, server]) => {
         const stdio = server as { type?: string, env?: Record<string, string> }
-        return [name, stdio.type === 'stdio' || stdio.type === undefined ? { ...stdio, env: { ...(stdio.env ?? {}), TMPDIR: tmp } } : server]
+        return [name, stdio.type === 'stdio' || stdio.type === undefined ? { ...stdio, env: { ...(stdio.env ?? {}), ...vars } } : server]
     }))
-    return { ...options, env: { ...(options.env ?? process.env), TMPDIR: tmp }, ...(options.mcpServers && { mcpServers }) }
+    return { ...options, env: { ...(options.env ?? process.env), ...vars }, ...(options.mcpServers && { mcpServers }) }
 }
