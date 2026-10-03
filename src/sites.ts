@@ -2,7 +2,7 @@
  * Serves the four local test pages and records what the agent did on them.
  *
  * Two origins on purpose: pages load from http://localhost:4100 and the
- * iframe form loads from http://127.0.0.1:4101, a different *site*, so
+ * iframe form loads from http://127.0.0.1:4101 (BENCH_PORT + 1), a different *site*, so
  * Chrome renders it as an out-of-process iframe.
  *
  *   POST /api/<task>/event   the page reports an action, returns { code }
@@ -19,8 +19,10 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
-export const MAIN_ORIGIN = 'http://localhost:4100'
-export const FRAME_ORIGIN = 'http://127.0.0.1:4101'
+/** BENCH_PORT moves both origins, so several benchmark processes can run at once */
+const PORT = Number(process.env.BENCH_PORT ?? 4100)
+export const MAIN_ORIGIN = `http://localhost:${PORT}`
+export const FRAME_ORIGIN = `http://127.0.0.1:${PORT + 1}`
 
 const PAGES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'sites', 'pages')
 const TYPES: Record<string, string> = {
@@ -115,7 +117,7 @@ function listen (port: number) {
 }
 
 export async function startSites () {
-    const servers = await Promise.all([listen(4100), listen(4101)])
+    const servers = await Promise.all([listen(PORT), listen(PORT + 1)])
     return {
         close: () => Promise.all(servers.map((s) => new Promise((resolve) => s.close(resolve))))
     }
