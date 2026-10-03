@@ -52,10 +52,12 @@ function compareVersions (a, b) {
     return 0
 }
 
-function successPill (stats) {
+function successPill (stats, { range = false } = {}) {
     const pct = Math.round(stats.successRate * 100)
     const cls = pct >= 90 ? 'good' : pct >= 60 ? 'mid' : 'bad'
-    return `<span class="pill ${cls}" title="${stats.passed} of ${stats.runs} runs passed">${pct}%</span>`
+    const [lo, hi] = (stats.successCi ?? [stats.successRate, stats.successRate]).map((x) => Math.round(x * 100))
+    const title = `${stats.passed} of ${stats.runs} runs passed; 95% confidence interval ${lo}–${hi}%`
+    return `<span class="pill ${cls}" title="${title}">${pct}%</span>${range ? `<span class="ci">${lo}–${hi}%</span>` : ''}`
 }
 
 /** value with a bar scaled to the largest value in the column; smallest is "best" */
@@ -82,7 +84,7 @@ function renderLatest (data, groups) {
         <tbody>${latest.map((g) => `
             <tr>
                 <td>${toolCell(data.setups, g)}</td>
-                <td class="num">${successPill(g)}</td>
+                <td class="num">${successPill(g, { range: true })}</td>
                 <td>${metric(g.tokens, col('tokens'), fmt.tokens)}</td>
                 <td>${metric(g.cost, col('cost'), fmt.cost)}</td>
                 <td>${metric(g.seconds, col('seconds'), fmt.seconds)}</td>
@@ -110,7 +112,7 @@ function renderByVersion (data, groups) {
             return ''
         }
         const rows = versions.map((g, i) => {
-            const tasks = data.tasks.filter((t) => g.perTask[t.id])
+            const tasks = (data.tasks[g.suite] ?? []).filter((t) => g.perTask[t.id])
             return `
             <details class="version">
                 <summary>
@@ -131,7 +133,7 @@ function renderByVersion (data, groups) {
                         <thead><tr><th>Task</th><th class="num">Passed</th><th class="num">Tokens</th><th class="num">Cost</th><th class="num">Time</th><th class="num">Tool calls</th></tr></thead>
                         <tbody>${tasks.map((t) => {
                             const s = g.perTask[t.id]
-                            return `<tr><td class="mono">${esc(t.id)} <span class="tag">${esc(t.kind)}</span></td><td class="num">${s.passed}/${s.runs}</td><td class="num">${fmt.tokens(s.tokens)}</td><td class="num">${fmt.cost(s.cost)}</td><td class="num">${fmt.seconds(s.seconds)}</td><td class="num">${fmt.int(s.toolCalls)}</td></tr>`
+                            return `<tr><td class="mono">${esc(t.id)} <span class="tag">${esc(t.level ?? t.kind)}</span></td><td class="num">${s.passed}/${s.runs}</td><td class="num">${fmt.tokens(s.tokens)}</td><td class="num">${fmt.cost(s.cost)}</td><td class="num">${fmt.seconds(s.seconds)}</td><td class="num">${fmt.int(s.toolCalls)}</td></tr>`
                         }).join('')}</tbody>
                     </table></div>
                     <h4>Runs behind these numbers</h4>
@@ -149,8 +151,8 @@ function renderByVersion (data, groups) {
     $('#by-version').innerHTML = blocks
 }
 
-function renderRuns (data, model) {
-    const runs = data.runs.filter((r) => r.model === model)
+function renderRuns (data, suite, model) {
+    const runs = data.runs.filter((r) => r.suite === suite && r.model === model)
     $('#run-list').innerHTML = `
         <thead><tr><th>Date</th><th>Run</th><th>Versions tested</th><th class="num">Runs / task</th><th>Workflow</th></tr></thead>
         <tbody>${runs.map((run) => `
@@ -166,31 +168,47 @@ function renderRuns (data, model) {
         </tbody>`
 }
 
-function render (data, model) {
-    const groups = data.groups.filter((g) => g.model === model)
+function render (data, suite, model) {
+    const groups = data.groups.filter((g) => g.suite === suite && g.model === model)
     renderLatest(data, groups)
     renderByVersion(data, groups)
-    renderRuns(data, model)
-    const last = data.runs.find((r) => r.model === model)
-    $('#freshness').textContent = last ? `Last run ${fmt.date(last.startedAt)} · ${data.runs.filter((r) => r.model === model).length} run(s)` : ''
+    renderRuns(data, suite, model)
+    $('#suite-description').textContent = data.suites.find((s) => s.id === suite)?.description ?? ''
+    const runs = data.runs.filter((r) => r.suite === suite && r.model === model)
+    $('#freshness').textContent = runs.length ? `Last run ${fmt.date(runs[0].startedAt)} · ${runs.length} run(s)` : ''
     const url = new URL(location.href)
+    url.searchParams.set('suite', suite)
     url.searchParams.set('model', model)
     history.replaceState(null, '', url)
+}
+
+/** options in the given order (suites and models ordered by their newest run); keeps `wanted` when it is one of them */
+function fillSelect (select, values, wanted) {
+    select.innerHTML = values.map((v) => `<option value="${esc(v.id)}">${esc(v.label)}</option>`).join('')
+    select.value = values.some((v) => v.id === wanted) ? wanted : values[0]?.id
 }
 
 const data = await (await fetch('data.json', { cache: 'no-store' })).json()
 $('#generated').textContent = `updated ${fmt.date(data.generatedAt)}`
 
 if (!data.runs.length) {
-    document.querySelectorAll('main > section:not(.intro), .controls').forEach((el) => { el.hidden = true })
+    document.querySelectorAll('main > section:not(.intro), .controls, #suite-description').forEach((el) => { el.hidden = true })
     $('#empty').hidden = false
 } else {
-    // models ordered by their newest run
-    const models = [...new Set(data.runs.map((r) => r.model))]
-    const select = $('#model')
-    select.innerHTML = models.map((m) => `<option>${esc(m)}</option>`).join('')
-    const wanted = new URL(location.href).searchParams.get('model')
-    select.value = models.includes(wanted) ? wanted : models[0]
-    select.addEventListener('change', () => render(data, select.value))
-    render(data, select.value)
+    const params = new URL(location.href).searchParams
+    const suiteSelect = $('#suite')
+    const modelSelect = $('#model')
+    const suites = [...new Set(data.runs.map((r) => r.suite))].map((id) => data.suites.find((s) => s.id === id) ?? { id, label: id })
+    fillSelect(suiteSelect, suites, params.get('suite'))
+    const fillModels = (wanted) => {
+        const models = [...new Set(data.runs.filter((r) => r.suite === suiteSelect.value).map((r) => r.model))]
+        fillSelect(modelSelect, models.map((m) => ({ id: m, label: m })), wanted)
+    }
+    fillModels(params.get('model'))
+    suiteSelect.addEventListener('change', () => {
+        fillModels(modelSelect.value)
+        render(data, suiteSelect.value, modelSelect.value)
+    })
+    modelSelect.addEventListener('change', () => render(data, suiteSelect.value, modelSelect.value))
+    render(data, suiteSelect.value, modelSelect.value)
 }

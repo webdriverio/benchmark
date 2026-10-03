@@ -7,8 +7,14 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 export interface Row {
+    /** missing in results from before suites existed: those are token-study runs */
+    suite?: string
     setup: string
     task: string
+    kind?: string
+    level?: string
+    /** still waiting for a judge (see judge.ts); never counted */
+    pending?: boolean
     rep: number
     pass: boolean
     detail: string
@@ -20,11 +26,15 @@ export interface Row {
     error?: string
 }
 
-export async function readRows (dir: string): Promise<Row[]> {
+/** every judged run in `dir`; runs still waiting for a judge are left out, not counted as failures */
+export async function readRows (dir: string, { includePending = false } = {}): Promise<Row[]> {
     const rows: Row[] = []
     for (const file of (await fs.readdir(dir)).filter((f) => f.startsWith('runs-') && f.endsWith('.jsonl')).sort()) {
         for (const line of (await fs.readFile(path.join(dir, file), 'utf8')).split('\n').filter(Boolean)) {
-            rows.push(JSON.parse(line))
+            const row = JSON.parse(line) as Row
+            if (includePending || !row.pending) {
+                rows.push(row)
+            }
         }
     }
     return rows

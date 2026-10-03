@@ -12,7 +12,7 @@ import path from 'node:path'
 
 import { readRows, summaryTable, taskTable, failureList, summarize } from './report.ts'
 import { SETUPS } from './setups.ts'
-import { TASKS } from './tasks.ts'
+import { DEFAULT_SUITE, SUITES, TASKS, type SuiteId } from './tasks.ts'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const RESULTS = path.join(ROOT, 'results')
@@ -21,6 +21,8 @@ const ORDER = SETUPS.map((s) => s.id)
 
 interface SetupMeta { pkg: string, version?: string, url?: string, skipped?: string }
 interface Meta {
+    suite?: SuiteId
+    screenshots?: boolean
     startedAt: string
     finishedAt?: string
     model: string
@@ -45,12 +47,13 @@ async function mergeMeta (dir: string): Promise<Meta> {
     const metas: Meta[] = await Promise.all(files.map(async (f) => JSON.parse(await fs.readFile(path.join(dir, f), 'utf8'))))
     const [first] = metas
     for (const m of metas) {
-        if (m.model !== first.model || m.runsPerTask !== first.runsPerTask || m.seed !== first.seed) {
-            throw new Error('result files disagree on model, runs or seed; they come from different benchmark runs')
+        if (m.model !== first.model || m.runsPerTask !== first.runsPerTask || m.seed !== first.seed || (m.suite ?? DEFAULT_SUITE) !== (first.suite ?? DEFAULT_SUITE)) {
+            throw new Error('result files disagree on suite, model, runs or seed; they come from different benchmark runs')
         }
     }
     return {
         ...first,
+        suite: first.suite ?? DEFAULT_SUITE,
         startedAt: metas.map((m) => m.startedAt).sort()[0],
         finishedAt: metas.map((m) => m.finishedAt ?? '').sort().at(-1) || undefined,
         tasks: [...new Set(metas.flatMap((m) => m.tasks))],
@@ -68,7 +71,7 @@ async function mergeMeta (dir: string): Promise<Meta> {
 const version = (s?: SetupMeta) => s?.skipped ? 'skipped' : s?.version ?? 'n/a'
 const minutes = (meta: Meta) => meta.finishedAt ? `${Math.round((Date.parse(meta.finishedAt) - Date.parse(meta.startedAt)) / 60_000)} min` : 'unfinished'
 
-function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof readRows>>) {
+function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof readRows>>, pending = 0) {
     const run = meta.workflowRun
     const runLink = run ? `[workflow run #${run.id}](${run.url})` : 'a local run'
     const setupLabel = (setup: string) => {
@@ -81,12 +84,17 @@ function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof r
         const version = s.skipped ? '–' : s.url ? `[\`${s.version}\`](${s.url})` : `\`${s.version}\``
         return `| \`${setup}\` | ${label} | [\`${s.pkg}\`](${home}) | ${version} | ${s.skipped ? `⚠️ skipped: ${s.skipped}` : 'ran'} |`
     })
-    const taskList = meta.tasks.map((t) => {
-        const task = TASKS.find((x) => x.id === t)
-        return `\`${t}\`${task ? ` (${task.kind})` : ''}`
-    }).join(', ')
+    const suite = meta.suite ?? DEFAULT_SUITE
+    const taskList = suite === DEFAULT_SUITE
+        ? meta.tasks.map((t) => {
+            const task = TASKS.find((x) => x.id === t)
+            return `\`${t}\`${task ? ` (${task.kind})` : ''}`
+        }).join(', ')
+        : `${meta.tasks.length} tasks sampled from Online-Mind2Web (ids in [\`tasks/online-mind2web.json\`](${REPO_URL}/blob/main/tasks/online-mind2web.json)); live websites, so runs are not exactly repeatable`
+    const judge = rows.find((r) => (r as { judge?: Record<string, unknown> }).judge) as { judge?: { name: string, model: string, threshold: number, commit: string, patch: string } } | undefined
+    const pendingNote = pending ? `\n\n⚠️ ${pending} run(s) were not judged and are left out of every number below.` : ''
 
-    return `# Benchmark run ${id}
+    return `# Benchmark run ${id}: ${SUITES[suite].label}
 
 Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.commit.slice(0, 7)}\`](${REPO_URL}/commit/${meta.commit}). Raw data: [\`runs-*.jsonl\`](.) (one line per agent run, including the agent's final message) and [\`meta.json\`](meta.json).${run ? ` Full agent transcripts: the \`transcripts-*\` artifacts of the [workflow run](${run.url}) (kept 90 days).` : ''}
 
@@ -98,7 +106,10 @@ Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.c
 | Agent harness | Claude Agent SDK ${meta.environment.agentSdk} |
 | Runs | ${meta.runsPerTask} per task and setup, shuffled with seed ${meta.seed} |
 | Limits | ${meta.maxTurns} turns, ${meta.timeoutMin} min per run |
+| Suite | ${SUITES[suite].label}: ${SUITES[suite].description} |
 | Tasks | ${taskList} |
+| Success decided by | ${judge?.judge ? `${judge.judge.name} (\`${judge.judge.model}\`, score threshold ${judge.judge.threshold}, [Online-Mind2Web@${judge.judge.commit.slice(0, 7)}](https://github.com/OSU-NLP-Group/Online-Mind2Web/tree/${judge.judge.commit}); patched: ${judge.judge.patch}). Its reasoning per run: \`judgments-*.jsonl\`` : 'code checks of the answer and the page state ([src/tasks.ts](' + REPO_URL + '/blob/main/src/tasks.ts))'} |
+| Screenshots | ${meta.screenshots ? 'after every tool call, taken by the harness over CDP (no agent tokens)' : 'none'} |
 | Duration | ${minutes(meta)} |
 
 How the tasks, setups and checks work, and what we do to keep the comparison fair: [README](${REPO_URL}#keeping-it-fair).
@@ -109,7 +120,7 @@ How the tasks, setups and checks work, and what we do to keep the comparison fai
 |---|---|---|---|---|
 ${tools.join('\n')}
 
-## Results
+## Results${pendingNote}
 
 ${rows.length ? summaryTable(rows, ORDER, setupLabel) : '_No runs completed._'}
 
@@ -149,8 +160,8 @@ async function renderIndex () {
         '',
         'Every published benchmark run, newest first. Each report lists the exact tool versions, the configuration, every failure and a link to the workflow run that produced it.',
         '',
-        `| Date | Report | Model | Runs | ${ORDER.map((s) => `\`${s}\``).join(' | ')} | Workflow |`,
-        `|---|---|---|--:|${ORDER.map(() => '---').join('|')}|---|`
+        `| Date | Report | Tasks | Model | Runs | ${ORDER.map((s) => `\`${s}\``).join(' | ')} | Workflow |`,
+        `|---|---|---|---|--:|${ORDER.map(() => '---').join('|')}|---|`
     ]
     for (const { id, meta, rows } of runs) {
         const bySetup = new Map(summarize(rows).map((s) => [s.setup, s]))
@@ -166,14 +177,15 @@ async function renderIndex () {
             return `${s.version}<br>${Math.round(sum.passed / sum.total * 100)}% · ${Math.round(sum.tokens / 1000)}k`
         })
         const workflow = meta.workflowRun ? `[#${meta.workflowRun.id}](${meta.workflowRun.url})` : 'local'
-        lines.push(`| ${meta.startedAt.slice(0, 10)} | [${id}](${id}/report.md) | \`${meta.model}\` | ${rows.length} | ${cells.join(' | ')} | ${workflow} |`)
+        lines.push(`| ${meta.startedAt.slice(0, 10)} | [${id}](${id}/report.md) | ${SUITES[meta.suite ?? DEFAULT_SUITE].label} | \`${meta.model}\` | ${rows.length} | ${cells.join(' | ')} | ${workflow} |`)
     }
     lines.push('', '_Each setup cell: tool version, success rate, median tokens per task._', '')
     await fs.writeFile(path.join(RESULTS, 'README.md'), lines.join('\n'))
-    return runs[0]
+    // the newest run of every suite, token study first
+    return (Object.keys(SUITES) as SuiteId[]).flatMap((suite) => runs.find((r) => (r.meta.suite ?? DEFAULT_SUITE) === suite) ?? [])
 }
 
-async function updateReadme (latest: Awaited<ReturnType<typeof publishedRuns>>[number]) {
+async function updateReadme (latest: Awaited<ReturnType<typeof publishedRuns>>) {
     const file = path.join(ROOT, 'README.md')
     const readme = await fs.readFile(file, 'utf8')
     const start = '<!-- results:start -->'
@@ -181,14 +193,19 @@ async function updateReadme (latest: Awaited<ReturnType<typeof publishedRuns>>[n
     if (!readme.includes(start) || !readme.includes(end)) {
         throw new Error(`README.md needs ${start} and ${end} markers`)
     }
-    const { id, meta, rows } = latest
-    const versions = Object.entries(meta.setups).map(([setup, s]) => s.skipped ? `${setup}: skipped` : `${setup}: \`${s.pkg}@${s.version}\``).join(' · ')
-    const block = `${start}
-Latest run: [${id}](results/${id}/report.md) on ${meta.startedAt.slice(0, 10)}, \`${meta.model}\`, ${meta.runsPerTask} runs per task${meta.workflowRun ? `, [workflow run](${meta.workflowRun.url})` : ''}. All runs: [results](results/README.md).
+    const sections = latest.map(({ id, meta, rows }) => {
+        const versions = Object.entries(meta.setups).map(([setup, s]) => s.skipped ? `${setup}: skipped` : `${setup}: \`${s.pkg}@${s.version}\``).join(' · ')
+        const suite = SUITES[meta.suite ?? DEFAULT_SUITE]
+        return `**${suite.label}.** Latest run: [${id}](results/${id}/report.md) on ${meta.startedAt.slice(0, 10)}, \`${meta.model}\`, ${meta.runsPerTask} runs per task${meta.workflowRun ? `, [workflow run](${meta.workflowRun.url})` : ''}.
 
 ${summaryTable(rows, ORDER)}
 
-Versions: ${versions}
+Versions: ${versions}`
+    })
+    const block = `${start}
+${sections.join('\n\n')}
+
+All runs: [results](results/README.md).
 ${end}`
     await fs.writeFile(file, readme.slice(0, readme.indexOf(start)) + block + readme.slice(readme.indexOf(end) + end.length))
 }
@@ -202,10 +219,11 @@ const resultDir = path.resolve(dir)
 const id = path.basename(resultDir)
 const meta = await mergeMeta(resultDir)
 const rows = await readRows(resultDir)
+const pending = (await readRows(resultDir, { includePending: true })).length - rows.length
 await fs.writeFile(path.join(resultDir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n')
-await fs.writeFile(path.join(resultDir, 'report.md'), renderReport(id, meta, rows))
+await fs.writeFile(path.join(resultDir, 'report.md'), renderReport(id, meta, rows, pending))
 const latest = await renderIndex()
-if (latest) {
+if (latest.length) {
     await updateReadme(latest)
 }
 console.log(`Published ${path.relative(ROOT, resultDir)}/report.md (${rows.length} runs)`)

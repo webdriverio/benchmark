@@ -41,7 +41,7 @@ export interface Setup {
     /** instructions the tool's own integration gives its agent, appended after the note */
     instructions?: (tool: InstalledTool) => Promise<string>
     /** build the Agent SDK options for one run in `cwd` */
-    options: (tool: InstalledTool, cwd: string, runId: string) => Promise<Partial<Options>>
+    options: (tool: InstalledTool, cwd: string, runId: string, run: RunOptions) => Promise<Partial<Options>>
     /**
      * Tool calls this setup may make beyond its auto-approved `allowedTools`.
      * Everything else is denied (see run.ts).
@@ -53,22 +53,41 @@ export interface Setup {
     cleanup?: (tool: InstalledTool, cwd: string, runId: string, env: NodeJS.ProcessEnv) => Promise<void>
 }
 
+export interface RunOptions {
+    /** the harness screenshots the browser after every tool call (see screenshots.ts) */
+    screenshots: boolean
+}
+
 // The prompts do not mention headless or headed: each tool picks its own
 // default (Playwright MCP is started with --headless, Stagehand's facade only
 // runs headed), and the workflow gives every job the same virtual display.
 
-function mcpSetup (id: string, label: string, tool: ToolSpec, args: string[] = []): Setup {
+function mcpSetup (id: string, label: string, tool: ToolSpec, args: string[] = [], prepare?: (cwd: string, run: RunOptions) => Promise<string[]>): Setup {
     return {
         id,
         label,
         tool,
         note: `Use the ${label} tools to control the browser.`,
-        options: async ({ binPath }) => ({
+        options: async ({ binPath }, cwd, _runId, run) => ({
             tools: [],
-            mcpServers: { browser: { type: 'stdio', command: process.execPath, args: [binPath, ...args] } },
+            mcpServers: { browser: { type: 'stdio', command: process.execPath, args: [binPath, ...args, ...(await prepare?.(cwd, run) ?? [])] } },
             allowedTools: ['mcp__browser']
         })
     }
+}
+
+/**
+ * Playwright starts Chrome over a pipe, without a debugging port, so the
+ * harness could not take its screenshots. With screenshots on, its config
+ * adds one; nothing else about the setup changes.
+ */
+async function playwrightDebugPort (cwd: string, run: RunOptions) {
+    if (!run.screenshots) {
+        return []
+    }
+    const config = path.join(cwd, 'playwright-mcp.json')
+    await fs.writeFile(config, JSON.stringify({ browser: { launchOptions: { args: ['--remote-debugging-port=0'] } } }))
+    return ['--config', config]
 }
 
 /**
@@ -116,8 +135,8 @@ async function prepareAgentBrowser (bin: string, cwd: string) {
 }
 
 export const SETUPS: Setup[] = [
-    mcpSetup('playwright-mcp', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated']),
-    mcpSetup('playwright-mcp-tuned', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated', '--snapshot-mode', 'none', '--codegen', 'none']),
+    mcpSetup('playwright-mcp', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated'], playwrightDebugPort),
+    mcpSetup('playwright-mcp-tuned', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated', '--snapshot-mode', 'none', '--codegen', 'none'], playwrightDebugPort),
     {
         // Stagehand's Claude Code integration: the facade MCP server with
         // `run`, `snapshot` and `screenshot`, wired up the way

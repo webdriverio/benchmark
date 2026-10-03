@@ -24,17 +24,20 @@
 <main class="wrap">
   <section class="intro">
     <h1>What does it cost an agent to get a browser task right?</h1>
-    <p>Coding agents run the same eight browser tasks with different tools: the tasks from Stagehand's <a href="https://www.stagehand.dev/blog/playwright-mcp-token-usage">Playwright MCP token study</a>, with the same model, harness and prompts for every tool. We measure tokens, cost, time and whether the answer was right. Every run, prompt and check is <a id="data-link" href="https://github.com/webdriverio/benchmark">public</a>.</p>
+    <p>Coding agents run the same browser tasks with different tools, with the same model, harness and prompts for every tool. We measure tokens, cost, time and whether the task was done. Every run, prompt and check is <a id="data-link" href="https://github.com/webdriverio/benchmark">public</a>.</p>
   </section>
 
   <div class="controls" role="group" aria-label="Filters">
+    <label>Tasks <select id="suite"></select></label>
     <label>Model <select id="model"></select></label>
     <span class="muted" id="freshness"></span>
   </div>
 
+  <p id="suite-description" class="suite-description"></p>
+
   <section aria-labelledby="latest-title">
     <h2 id="latest-title">Latest version of each tool</h2>
-    <p class="muted">Medians per task run. Tokens include cache reads and writes. Lower is better, except success.</p>
+    <p class="muted">Medians per task run. Tokens include cache reads and writes. Lower is better, except success. The range under a success rate is its 95% confidence interval: differences inside it can be chance.</p>
     <div class="table-scroll"><table id="latest" class="data"></table></div>
   </section>
 

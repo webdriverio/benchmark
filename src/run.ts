@@ -1,5 +1,5 @@
 /**
- * node src/run.ts [--setups a,b] [--tasks x,y] [--runs 3] [--model claude-sonnet-5] [--seed 1] [--out-dir results/<id>] [--dry-run]
+ * node src/run.ts [--suite token-study] [--setups a,b] [--tasks x,y] [--runs 3] [--model claude-sonnet-5] [--seed 1] [--out-dir results/<id>] [--dry-run]
  *
  * Installs the tool behind every selected setup, then runs every
  * setup × task × repetition once in one shuffled order (fixed seed, so a
@@ -20,9 +20,10 @@ import { parseArgs } from 'node:util'
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 
 import { startSites, resetSite, siteBase } from './sites.ts'
-import { TASKS, parseAnswer } from './tasks.ts'
+import { SUITES, loadTasks, parseAnswer, type SuiteId } from './tasks.ts'
 import { SETUPS, type Setup } from './setups.ts'
 import { installGitTool, installTool, type InstalledTool } from './tools.ts'
+import { captureScreenshot } from './screenshots.ts'
 
 const exec = promisify(execFile)
 const ROOT = path.resolve(import.meta.dirname, '..')
@@ -35,6 +36,7 @@ const SYSTEM_PROMPT = `You are a browser automation agent. Complete the task in 
 
 const { values: args } = parseArgs({
     options: {
+        suite: { type: 'string', default: 'token-study' },
         setups: { type: 'string', default: 'all' },
         tasks: { type: 'string', default: 'all' },
         runs: { type: 'string', default: '3' },
@@ -46,6 +48,8 @@ const { values: args } = parseArgs({
         // runs at the same time; every run gets its own page scope (see sites.ts).
         // Keep 1 for published numbers: parallel browsers compete for CPU.
         concurrency: { type: 'string', default: '1' },
+        // a screenshot after every tool call; always on for suites judged from screenshots
+        screenshots: { type: 'boolean', default: false },
         'dry-run': { type: 'boolean', default: false }
     }
 })
@@ -107,8 +111,14 @@ async function gitSha () {
     return (await exec('git', ['rev-parse', 'HEAD'], { cwd: ROOT }).catch(() => ({ stdout: 'unknown' }))).stdout.trim()
 }
 
+if (!(args.suite in SUITES)) {
+    throw new Error(`unknown suite "${args.suite}", expected one of: ${Object.keys(SUITES).join(', ')}`)
+}
+const suite = args.suite as SuiteId
 const selected = pick(SETUPS, args.setups)
-const tasks = pick(TASKS, args.tasks)
+const tasks = pick(await loadTasks(suite), args.tasks)
+// live tasks are judged from what the agent saw
+args.screenshots ||= tasks.some((t) => t.kind === 'live')
 const label = args.setups === 'all' ? 'all' : selected.map((s) => s.id).join('+')
 const startedAt = new Date()
 const outDir = path.resolve(args['out-dir'] ?? path.join(ROOT, 'results', startedAt.toISOString().slice(0, 19).replace(/:/g, '-')))
@@ -142,7 +152,7 @@ const plan = shuffle(
     Number(args.seed)
 )
 
-console.log(`\n${plan.length} runs: ${setups.length} setups × ${tasks.length} tasks × ${args.runs}, model ${args.model}, seed ${args.seed}`)
+console.log(`\n${plan.length} runs: ${setups.length} setups × ${tasks.length} ${suite} tasks × ${args.runs}, model ${args.model}, seed ${args.seed}${args.screenshots ? ', with screenshots' : ''}`)
 if (args['dry-run']) {
     plan.forEach((p, i) => console.log(`${String(i + 1).padStart(3)}  ${p.setup.id.padEnd(22)} ${p.task.id} #${p.rep}`))
     process.exit(0)
@@ -153,6 +163,8 @@ const runsFile = path.join(outDir, `runs-${label}.jsonl`)
 const transcriptDir = path.join(ROOT, 'transcripts', path.basename(outDir))
 const metaFile = path.join(outDir, `meta-${label}.json`)
 const meta = {
+    suite,
+    screenshots: args.screenshots,
     startedAt: startedAt.toISOString(),
     finishedAt: undefined as string | undefined,
     model: args.model,
@@ -196,7 +208,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     }, Number(args['timeout-min']) * 60_000)
     const started = Date.now()
     const row: Record<string, unknown> = {
-        runId, setup: setup.id, task: task.id, kind: task.kind, rep, model: args.model, tool: `${tool.pkg}@${tool.version}`
+        runId, suite, setup: setup.id, task: task.id, kind: task.kind, ...(task.level && { level: task.level }), rep, model: args.model, tool: `${tool.pkg}@${tool.version}`
     }
     let toolCalls = 0
     let result: Extract<SDKMessage, { type: 'result' }> | undefined
@@ -209,8 +221,19 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     // short on purpose: tools put Unix sockets in TMPDIR, and macOS limits
     // their paths to 104 characters
     const tmp = await fs.mkdtemp('/tmp/wb-')
+    // one entry per tool call: what the agent did and what the page looked like after it
+    const steps: { step: number, toolUseId: string, tool: string, input: unknown, screenshot?: string, url?: string }[] = []
+    const screenDir = path.join(transcriptDir, runId)
+    const afterTool = async (input: unknown) => {
+        const { tool_name: tool, tool_input: toolInput, tool_use_id: toolUseId } = input as { tool_name: string, tool_input: unknown, tool_use_id: string }
+        const step = steps.length
+        const file = `${String(step).padStart(4, '0')}.jpg`
+        const shot = await captureScreenshot(tmp, path.join(screenDir, file))
+        steps.push({ step, toolUseId, tool, input: toolInput, ...(shot && { screenshot: file, url: shot.url }) })
+        return {}
+    }
     try {
-        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId), tmp)
+        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId, { screenshots: args.screenshots }), tmp)
         const stream = query({
             prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
             options: {
@@ -229,8 +252,9 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
                 // Claude Code approves read-only shell commands (cat, ls, grep …)
                 // on its own before canUseTool is asked; this hook runs first,
                 // so a Bash call is allowed exactly when the setup permits it
-                hooks: setup.permit ? {
-                    PreToolUse: [{
+                hooks: {
+                    ...(args.screenshots && { PostToolUse: [{ hooks: [afterTool] }] }),
+                    ...(setup.permit && { PreToolUse: [{
                         matcher: 'Bash',
                         hooks: [async (input) => {
                             const toolInput = (input as { tool_input?: Record<string, unknown> }).tool_input ?? {}
@@ -238,8 +262,8 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
                                 ? {}
                                 : { hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: setup.permitHint ?? 'This command is not available in this benchmark setup.' } }
                         }]
-                    }]
-                } : undefined,
+                    }] })
+                },
                 settingSources: [],
                 abortController,
                 ...setupOptions
@@ -283,9 +307,15 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     // full transcripts can be megabytes: the workflow keeps them as an artifact, they are not committed
     await fs.mkdir(transcriptDir, { recursive: true })
     await fs.writeFile(path.join(transcriptDir, `${runId}.jsonl`), transcript.map((m) => JSON.stringify(m)).join('\n') + '\n')
+    if (args.screenshots) {
+        await fs.mkdir(screenDir, { recursive: true })
+        await fs.writeFile(path.join(screenDir, 'steps.json'), JSON.stringify(steps, null, 2) + '\n')
+        row.screenshots = steps.filter((s) => s.screenshot).length
+    }
     Object.assign(row, {
         pass: check.pass,
         detail: check.detail,
+        ...(!row.error && 'pending' in check && check.pending && { pending: true }),
         answer,
         finalMessage: text.length > 2000 ? `…${text.slice(-2000)}` : text,
         resultSubtype: result?.subtype,
@@ -305,7 +335,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     await fs.rm(tmp, { recursive: true, force: true })
     await fs.appendFile(runsFile, JSON.stringify(row) + '\n')
 
-    console.log(`[${++done}/${plan.length}] ${check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass ? '' : check.detail}`)
+    console.log(`[${++done}/${plan.length}] ${row.pending ? '…' : check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass || row.pending ? '' : check.detail}`)
 }
 
 const queue = [...plan.entries()]
@@ -318,7 +348,8 @@ await Promise.all(Array.from({ length: Math.max(1, Number(args.concurrency)) }, 
 await sites.close()
 meta.finishedAt = new Date().toISOString()
 await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
-console.log(`\nResults in ${path.relative(ROOT, outDir)}\nPublish: node src/publish.ts ${path.relative(ROOT, outDir)}`)
+const judgeHint = tasks.some((t) => t.kind === 'live') ? `\nJudge: node src/judge.ts ${path.relative(ROOT, outDir)} (needs OPENAI_API_KEY)` : ''
+console.log(`\nResults in ${path.relative(ROOT, outDir)}${judgeHint}\nPublish: node src/publish.ts ${path.relative(ROOT, outDir)}`)
 
 /**
  * Browsers that are killed instead of closed leave their profile (100+ MB)

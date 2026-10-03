@@ -8,6 +8,7 @@
 import { startSites, resetSite, MAIN_ORIGIN, FRAME_ORIGIN } from './sites.ts'
 import { TASKS, parseAnswer } from './tasks.ts'
 import { isAgentBrowserCommand, isWdioSessionCommand } from './permit.ts'
+import { sample, type Mind2WebTask } from './mind2web.ts'
 
 const sites = await startSites()
 
@@ -124,6 +125,27 @@ for (const [command, expected] of AGENT_BROWSER_PERMIT) {
     const ok = isAgentBrowserCommand(command) === expected
     failed += ok ? 0 : 1
     console.log(`${ok ? '✓' : '✗'} agent-browser permit ${expected ? 'allows' : 'denies'}: ${command.slice(0, 70)}`)
+}
+
+// the Online-Mind2Web sample: reproducible, in the dataset's level proportions
+const fakeDataset: Mind2WebTask[] = Array.from({ length: 300 }, (_, i) => ({
+    task_id: i.toString(16).padStart(32, '0'),
+    confirmed_task: `task ${i}`,
+    website: 'https://example.com',
+    reference_length: 5,
+    level: i < 80 ? 'easy' : i < 223 ? 'medium' : 'hard'
+}))
+const first = sample(fakeDataset, 50, 1)
+const again = sample([...fakeDataset].reverse(), 50, 1)
+const levels = (s: typeof first) => ['easy', 'medium', 'hard'].map((l) => s.filter((t) => t.level === l).length).join('/')
+for (const [name, ok] of [
+    ['sample has 50 distinct tasks', first.length === 50 && new Set(first.map((t) => t.task_id)).size === 50],
+    ['sample is the same for the same seed, whatever the dataset order', JSON.stringify(first) === JSON.stringify(again)],
+    ['sample differs for another seed', JSON.stringify(first) !== JSON.stringify(sample(fakeDataset, 50, 2))],
+    [`sample keeps the level proportions (${levels(first)})`, levels(first) === '13/24/13']
+] as const) {
+    failed += ok ? 0 : 1
+    console.log(`${ok ? '✓' : '✗'} ${name}`)
 }
 
 await sites.close()

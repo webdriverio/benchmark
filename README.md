@@ -61,11 +61,29 @@ The four local pages live in [`sites/pages`](sites/pages) and report every actio
 
 Every agent ends with a line `ANSWER: <json>`. `npm run selftest` checks the checks: each one must accept a correct answer and reject a wrong one.
 
+## Online-Mind2Web: tasks we didn't write
+
+The eight tasks above are few, everyone passes them, and we wrote the local pages and the checks ourselves. The second task set, `online-mind2web`, fixes that: a sample of [Online-Mind2Web](https://github.com/OSU-NLP-Group/Online-Mind2Web) (COLM 2025), 300 tasks on 136 live websites written by researchers at Ohio State, judged by the benchmark's own judge. Neither we nor any tool vendor chose or tuned for these tasks. Results are reported separately from the token study (pick **Tasks** on the website).
+
+- **The sample:** 50 tasks, split across easy, medium and hard in the dataset's own proportions, drawn with a fixed seed from a fixed dataset revision ([`src/mind2web.ts`](src/mind2web.ts)). [`tasks/online-mind2web.json`](tasks/online-mind2web.json) lists their ids; anyone with the dataset can recompute it. The dataset is gated on Hugging Face, so its task texts stay out of this repository: the runner downloads them with `HF_TOKEN` (accept the [dataset terms](https://huggingface.co/datasets/osunlp/Online-Mind2Web) first).
+- **The prompt:** the task and its start page, plus one rule: don't sign in, create accounts, pay or enter personal data; stop right before that. Same for every setup.
+- **Screenshots:** after every tool call the harness, not the agent, screenshots the page the agent is on, over the Chrome DevTools Protocol of the browser the run started ([`src/screenshots.ts`](src/screenshots.ts)). No agent pays tokens for them. Playwright starts Chrome without a debugging port, so for this suite its config adds one; nothing else about any setup changes. We checked that capturing doesn't change tool behaviour (same tokens and results with and without, for Stagehand and agent-browser).
+- **The judge:** [WebJudge](https://github.com/OSU-NLP-Group/Online-Mind2Web#-webjudge) with `o4-mini`, as its authors recommend (86% agreement with human reviewers), at a pinned commit ([`src/judge.ts`](src/judge.ts)). It sees the task, the agent's actions and the screenshots, not the agent's final answer, and comes from another model family than the agents, so it can't favour its own. The action history is exactly what the agent issued (the shell command or the tool call), never a tool's reply, so a tool with chattier output gains nothing. Two changes to running it, both mechanical: WebJudge sends `max_tokens=512` and `temperature=0`, which OpenAI's reasoning models reject (and 512 tokens would go to reasoning), so the one API call sends `max_completion_tokens` instead; and its worker processes need the `fork` start method, which a wrapper sets. The judge's reasoning for every run is published in `judgments-*.jsonl`, for spot checks.
+- **Unjudged runs don't count:** a run the judge couldn't decide stays pending and is left out of every number, with a note in the report.
+- **Uncertainty is shown:** 50 tasks can't separate close results. The website shows a 95% confidence interval under every success rate.
+
+Limitations to keep in mind:
+
+- Live websites change, block bots and show CAPTCHAs. All setups of a workflow run run at the same time, but runs are not exactly repeatable.
+- WebJudge disagrees with human reviewers on about one run in seven.
+- The judge sees the page after each tool call. A tool that does several steps in one call (`perform_actions`, `run` with several actions) leaves fewer screenshots of the steps in between, which can hide evidence the judge looks for, such as an applied filter.
+- Our action strings don't follow Online-Mind2Web's submission grammar, which only matters for an official leaderboard submission. The trajectories are in their v1 layout and could be converted.
+
 ## Keeping it fair
 
 - **Same model and harness for every setup:** `claude-sonnet-5` with thinking disabled, through the Claude Agent SDK, as in Stagehand's study.
 - **Same prompts:** one system prompt for everyone. A setup only adds one sentence on how to reach the browser ([`src/setups.ts`](src/setups.ts)).
-- **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. `wdio-session` gets `Skill`, `Read` and `Bash` for `wdio session …` commands only ([`src/permit.ts`](src/permit.ts): every part of a command must be a `wdio session` call, an `echo` piped into one or a read-only filter on its output; no substitutions, no redirects outside the run directory). Every other tool call is denied.
+- **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. The command-line setups (`wdio-session`, `agent-browser`) get `Skill`, `Read` and `Bash` for their own commands only ([`src/permit.ts`](src/permit.ts): every part of a command must be a call of the tool, an `echo`, `true`, a heredoc or `echo` feeding the tool, or a read-only filter on its output; command substitution only of the tool's own commands; no redirects outside the run directory). agent-browser's `install`, `upgrade`, `plugin`, `chat` (which runs a model of its own) and `dashboard` are denied. Every other tool call is denied.
 - **No hints in the prompt:** the prompts don't mention headless or headed browsers or any tool's flags; each tool runs with its own defaults.
 - **Same browser conditions:** every setup asks for a headless local Chrome (Stagehand's facade only runs headed, so every workflow job gets the same virtual display), a fresh working directory per run, and the page state is reset before each run.
 - **Debuggable:** every result row keeps the agent's final message, and the workflow keeps every full transcript as an artifact for 90 days.
@@ -83,6 +101,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 
 | Input | Default | What it does |
 |---|---|---|
+| `suite` | `token-study` | task set: `token-study` or `online-mind2web` (needs the `HF_TOKEN` and `OPENAI_API_KEY` repository secrets; use `runs` 1) |
 | `webdriverio` | `10.0.0-alpha.155` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
 | `wdio-mcp` | `4.0.0-dev.56` | `@wdio/mcp` version |
 | `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
@@ -92,6 +111,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `runs` | `3` | runs per task and setup |
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
 | `seed` | `1` | seed for the run order |
+| `concurrency` | `1` | runs at the same time per setup; 2 halves the time of an `online-mind2web` run |
 | `publish` | on | commit the results to this repository |
 
 npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
@@ -125,7 +145,16 @@ Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION`,
 export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio
 ```
 
-Runner options: `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10), `--concurrency` (default 1; every run gets its own copy of the local pages under `/r/<run>/`, but parallel browsers compete for CPU, so keep 1 for published numbers).
+Online-Mind2Web needs `HF_TOKEN` (dataset terms accepted) for the tasks, and `OPENAI_API_KEY` plus `python3` for the judge:
+
+```sh
+node src/mind2web.ts sample                        # once: pick the 50 tasks, then commit tasks/online-mind2web.json
+npm run bench -- --suite online-mind2web --runs 1 --concurrency 2
+node src/judge.ts results/<id>                     # WebJudge decides every run, writes judgments-*.jsonl
+node src/publish.ts results/<id>
+```
+
+Runner options: `--suite` (`token-study` or `online-mind2web`, default `token-study`), `--screenshots` (on for `online-mind2web`), `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10), `--concurrency` (default 1; every run gets its own copy of the local pages under `/r/<run>/`, but parallel browsers compete for CPU, so keep 1 for published numbers).
 
 A full run is 120 agent runs. At Stagehand's reported $0.026–$0.051 per task, expect roughly $5–10 in model costs.
 

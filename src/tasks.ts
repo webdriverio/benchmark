@@ -10,18 +10,45 @@
  * answer is right AND, for the local pages, the page recorded the action.
  */
 import { siteState } from './sites.ts'
+import { loadDataset, loadSample } from './mind2web.ts'
 
 export interface Check {
     pass: boolean
     detail: string
+    /** decided later by a judge (see judge.ts), not by this check */
+    pending?: boolean
 }
+
+/**
+ * Task sets, reported separately: a tool's numbers on one never mix with
+ * its numbers on another.
+ */
+export const SUITES = {
+    'token-study': {
+        label: 'Token study',
+        description: 'The eight tasks from Stagehand\'s Playwright MCP token study: four public sites and four local pages, checked by code.'
+    },
+    'online-mind2web': {
+        label: 'Online-Mind2Web',
+        description: 'A fixed random sample of Online-Mind2Web, an independent benchmark of 300 tasks on live websites, judged by its own WebJudge.'
+    }
+} as const
+
+export type SuiteId = keyof typeof SUITES
+
+/** results from before suites existed are all token-study runs */
+export const DEFAULT_SUITE: SuiteId = 'token-study'
 
 export interface Task {
     id: string
-    /** public site or one of our local pages */
-    kind: 'public' | 'local'
+    /** public site, one of our local pages, or a live-web task judged from screenshots */
+    kind: 'public' | 'local' | 'live'
+    /** for live tasks: easy, medium or hard, as the benchmark rates it */
+    level?: string
     /** `{base}` is replaced with where this run finds the local pages (see siteBase) */
     prompt: string
+    /** for live tasks: the benchmark's own task id */
+    sourceId?: string
     /** `scope` is the run's page scope, for tasks that read what the page recorded */
     check: (answer: unknown, scope?: string) => Promise<Check>
 }
@@ -180,4 +207,39 @@ export function parseAnswer (text: string): unknown {
     } catch {
         return undefined
     }
+}
+
+/**
+ * Online-Mind2Web tasks, as an agent gets them here. The benchmark's own
+ * agents receive the task and the website; the rule against signing in or
+ * paying keeps runs on live sites harmless. WebJudge decides success from the
+ * actions and screenshots, so the ANSWER line is only recorded.
+ */
+async function mind2webTasks (): Promise<Task[]> {
+    const [sample, dataset] = await Promise.all([loadSample(), loadDataset()])
+    const byId = new Map(dataset.map((t) => [t.task_id, t]))
+    return sample.tasks.map(({ task_id: taskId }) => {
+        const task = byId.get(taskId)
+        if (!task) {
+            throw new Error(`Online-Mind2Web task ${taskId} is not in the dataset revision ${sample.revision}`)
+        }
+        return {
+            id: `om2w-${taskId.slice(0, 8)}`,
+            kind: 'live' as const,
+            level: task.level,
+            sourceId: taskId,
+            prompt: `${task.confirmed_task}
+Start at ${task.website}.
+Do not sign in, create an account, pay or enter personal data. If the task would need that, stop on the page right before it.
+${ANSWER_FORMAT} {"answer": "<what you found, or what you did>"}.`,
+            check: async () => ({ pass: false, detail: 'awaiting WebJudge', pending: true })
+        }
+    })
+}
+
+export async function loadTasks (suite: SuiteId): Promise<Task[]> {
+    if (suite === 'online-mind2web') {
+        return mind2webTasks()
+    }
+    return TASKS
 }

@@ -10,6 +10,11 @@ name: Benchmark
 on:
   workflow_dispatch:
     inputs:
+      suite:
+        description: 'Task set: token-study (8 tasks, checked by code) or online-mind2web (50 live-web tasks judged by WebJudge; needs the HF_TOKEN and OPENAI_API_KEY secrets, use runs 1)'
+        type: choice
+        options: [token-study, online-mind2web]
+        default: token-study
       webdriverio:
         description: '@wdio/cli version for wdio session (v10 and up; latest is still v9, which has no wdio session)'
         default: 10.0.0-alpha.155
@@ -39,6 +44,9 @@ on:
         default: all
       seed:
         description: Seed for the run order
+        default: '1'
+      concurrency:
+        description: Runs at the same time per setup (1 for the cleanest timings; 2 halves the time of a live-web run)
         default: '1'
       publish:
         description: Commit the results to the repository
@@ -78,7 +86,8 @@ jobs:
     name: ${{ matrix.setup }}
     needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    # GitHub's maximum: 50 live-web tasks take a few hours per setup
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -91,6 +100,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run selftest
+      - uses: actions/setup-python@v5
+        if: ${{ inputs.suite == 'online-mind2web' }}
+        with:
+          python-version: '3.11'
       - name: Run benchmark
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -99,6 +112,9 @@ jobs:
           PLAYWRIGHT_MCP_VERSION: ${{ inputs.playwright-mcp }}
           STAGEHAND_REF: ${{ inputs.stagehand }}
           AGENT_BROWSER_VERSION: ${{ inputs.agent-browser }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SUITE: ${{ inputs.suite }}
+          CONCURRENCY: ${{ inputs.concurrency }}
           SETUP: ${{ matrix.setup }}
           TASKS: ${{ inputs.tasks }}
           RUNS: ${{ inputs.runs }}
@@ -107,7 +123,16 @@ jobs:
           OUT_DIR: results/${{ needs.plan.outputs.result-id }}
         # a virtual display for every job: Stagehand's facade always launches a
         # headed browser, and the other setups should run under the same conditions
-        run: xvfb-run --auto-servernum node src/run.ts --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --out-dir "$OUT_DIR"
+        run: xvfb-run --auto-servernum node src/run.ts --suite "$SUITE" --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --concurrency "$CONCURRENCY" --out-dir "$OUT_DIR"
+      - name: Judge with WebJudge
+        # a judge from another model family than the agents; runs it cannot
+        # judge stay pending and are left out of the results, not failed
+        if: ${{ always() && inputs.suite == 'online-mind2web' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OUT_DIR: results/${{ needs.plan.outputs.result-id }}
+        run: node src/judge.ts "$OUT_DIR"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
