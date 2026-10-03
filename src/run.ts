@@ -189,7 +189,10 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     resetSite(task.id, scope)
 
     const abortController = new AbortController()
-    const timer = setTimeout(() => abortController.abort(), Number(args['timeout-min']) * 60_000)
+    const timer = setTimeout(() => {
+        abortController.abort()
+        timedOut?.()
+    }, Number(args['timeout-min']) * 60_000)
     const started = Date.now()
     const row: Record<string, unknown> = {
         runId, setup: setup.id, task: task.id, kind: task.kind, rep, model: args.model, tool: `${tool.pkg}@${tool.version}`
@@ -198,9 +201,13 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     let result: Extract<SDKMessage, { type: 'result' }> | undefined
     const transcript: SDKMessage[] = []
 
+    // the abort signal alone does not always end a hung agent (a stuck MCP
+    // call can keep the stream open), so the timeout also ends the iterator
+    let timedOut: (() => void) | undefined
+    const timeout = new Promise<'timeout'>((resolve) => { timedOut = () => resolve('timeout') })
     try {
         const setupOptions = await setup.options(tool, cwd, runId)
-        for await (const message of query({
+        const stream = query({
             prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
             options: {
                 model: args.model,
@@ -219,7 +226,19 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
                 abortController,
                 ...setupOptions
             }
-        })) {
+        })
+        const iterator = stream[Symbol.asyncIterator]()
+        while (true) {
+            const next = await Promise.race([iterator.next(), timeout])
+            if (next === 'timeout') {
+                abortController.abort()
+                stream.close?.()
+                throw new Error('timeout')
+            }
+            if (next.done) {
+                break
+            }
+            const message = next.value
             transcript.push(message)
             if (message.type === 'assistant') {
                 toolCalls += message.message.content.filter((block) => block.type === 'tool_use').length
