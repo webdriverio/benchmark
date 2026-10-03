@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser Agent Benchmark · WebdriverIO</title>
+<meta name="description" content="How many tokens, how much money and how much time coding agents need to finish real browser tasks with WebdriverIO, Playwright MCP and Stagehand. Every run, every version, open data.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23EA5906'/><text x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'>B</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="./"><span class="mark" aria-hidden="true">B</span> Browser Agent Benchmark</a>
+    <nav>
+      <a href="#versions">By version</a>
+      <a href="#runs">Runs</a>
+      <a id="method-link" href="https://github.com/webdriverio/benchmark#the-tasks">Method</a>
+      <a id="repo-link" href="https://github.com/webdriverio/benchmark">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>What does it cost an agent to get a browser task right?</h1>
+    <p>Coding agents run the same eight browser tasks with different tools: the tasks from Stagehand's <a href="https://www.stagehand.dev/blog/playwright-mcp-token-usage">Playwright MCP token study</a>, with the same model, harness and prompts for every tool. We measure tokens, cost, time and whether the answer was right. Every run, prompt and check is <a id="data-link" href="https://github.com/webdriverio/benchmark">public</a>.</p>
+  </section>
+
+  <div class="controls" role="group" aria-label="Filters">
+    <label>Model <select id="model"></select></label>
+    <span class="muted" id="freshness"></span>
+  </div>
+
+  <section aria-labelledby="latest-title">
+    <h2 id="latest-title">Latest version of each tool</h2>
+    <p class="muted">Medians per task run. Tokens include cache reads and writes. Lower is better, except success.</p>
+    <div class="table-scroll"><table id="latest" class="data"></table></div>
+  </section>
+
+  <section id="versions" aria-labelledby="versions-title">
+    <h2 id="versions-title">By package version</h2>
+    <p class="muted">Every run of a tool version with this model counts toward its row, across workflow runs. Select a version for per-task results and the runs behind it.</p>
+    <div id="by-version"></div>
+  </section>
+
+  <section id="runs" aria-labelledby="runs-title">
+    <h2 id="runs-title">Runs</h2>
+    <div class="table-scroll"><table id="run-list" class="data"></table></div>
+  </section>
+
+  <p id="empty" class="empty" hidden>No published benchmark runs yet.</p>
+</main>
+
+<footer class="site">
+  <div class="wrap muted">
+    Built from <a id="footer-repo" href="https://github.com/webdriverio/benchmark">webdriverio/benchmark</a> · <span id="generated"></span> · A <a href="https://webdriver.io">WebdriverIO</a> project
+  </div>
+</footer>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>

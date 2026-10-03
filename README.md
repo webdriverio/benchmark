@@ -122,6 +122,18 @@ Stagehand's Claude Code integration runs `@browserbasehq/stagehand-mcp`, which i
 
 If Stagehand's tools call a model of their own, those tokens do not show up in the Agent SDK's usage. We will measure and report them separately before publishing any comparison.
 
+## Website
+
+[benchmark.webdriver.io](https://benchmark.webdriver.io) renders every published run. `npm run site` builds it into `dist/`: a static page plus `data.json`, which [`src/site.ts`](src/site.ts) aggregates from `results/`.
+
+Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows the latest version of each tool, every version with per-task results and the runs behind it, and a log of all runs.
+
+The [Site workflow](.github/workflows/site.yml) deploys it to GitHub Pages on every push to `main` and after every Benchmark run. To preview locally:
+
+```sh
+npm run site && npx serve dist
+```
+
 ## Known gaps
 
 From driving the local pages by hand with `wdio session` (`WDIO_LOCAL` = the `v10` branch):
@@ -136,6 +148,7 @@ We will fix both gaps in WebdriverIO before publishing results, and say so in th
 
 ```
 .github/workflows/benchmark.yml   the benchmark workflow
+.github/workflows/site.yml        builds and deploys benchmark.webdriver.io
 src/run.ts        runner: installs tools, runs the plan, writes runs-*.jsonl and meta-*.json
 src/setups.ts     the five tool setups
 src/tools.ts      installs and pins the npm package behind each setup
@@ -144,6 +157,8 @@ src/sites.ts      local test page server (two origins)
 src/report.ts     Markdown tables from run results
 src/publish.ts    report.md, results index and README section for a result directory
 src/selftest.ts   checks the checks without a model
+src/site.ts       builds the website into dist/
+site/             the website: index.html, app.js, style.css
 sites/pages/      the four local test pages
 results/          one directory per benchmark run
 ```

@@ -1,0 +1,54 @@
+name: Site
+
+# Builds benchmark.webdriver.io from results/ and deploys it to GitHub Pages.
+#
+# The Benchmark workflow commits its results with GITHUB_TOKEN, and pushes
+# made with that token do not trigger other workflows. So besides pushes,
+# this also runs whenever a Benchmark run completes.
+
+on:
+  push:
+    branches: [main]
+    paths: [results/**, site/**, src/**, package.json, package-lock.json, .github/workflows/site.yml]
+  workflow_run:
+    workflows: [Benchmark]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # after a Benchmark run, build from main (which now has its results)
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run site
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
