@@ -47,7 +47,7 @@ export interface Setup {
      */
     permit?: (toolName: string, input: Record<string, unknown>) => boolean
     /** clean up anything the run left behind (browsers, daemons) */
-    cleanup?: (tool: InstalledTool, cwd: string, runId: string) => Promise<void>
+    cleanup?: (tool: InstalledTool, cwd: string, runId: string, env: NodeJS.ProcessEnv) => Promise<void>
 }
 
 // The prompts do not mention headless or headed: each tool picks its own
@@ -162,8 +162,10 @@ export const SETUPS: Setup[] = [
             }
         },
         permit: (toolName, input) => toolName === 'Bash' && typeof input.command === 'string' && isWdioSessionCommand(input.command),
-        cleanup: async ({ binPath }, cwd, runId) => {
-            await run(process.execPath, [binPath, 'session', 'close', '-s', runId], { cwd }).catch(() => {})
+        // the agent may have named its own sessions; the run's TMPDIR (in
+        // `env`) holds only the ones it opened
+        cleanup: async ({ binPath }, cwd, _runId, env) => {
+            await run(process.execPath, [binPath, 'session', 'close', '--all'], { cwd, env }).catch(() => {})
         }
     }
 ]

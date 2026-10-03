@@ -177,12 +177,13 @@ const meta = {
 await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
 
 const sites = await startSites()
-const runPrefix = `${label}-${startedAt.getTime()}`
+const startedMs = startedAt.getTime()
 
 let done = 0
 async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     const tool = tools.get(setup.id)!
-    const runId = `${runPrefix}-${String(i + 1).padStart(3, '0')}`
+    // doubles as the wdio session name: letters, digits, `-`, at most 64
+    const runId = `${setup.id}-${startedMs}-${String(i + 1).padStart(3, '0')}`
     const cwd = path.join(ROOT, '.runs', runId)
     await fs.mkdir(cwd, { recursive: true })
     const scope = `s${i + 1}`
@@ -295,10 +296,14 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
         tokens: { ...tokens, total: tokens.input + tokens.output + tokens.cacheRead + tokens.cacheCreation },
         costUsd: result?.total_cost_usd
     })
-    await fs.appendFile(runsFile, JSON.stringify(row) + '\n')
-    await setup.cleanup?.(tool, cwd, runId)
+    await setup.cleanup?.(tool, cwd, runId, { ...process.env, TMPDIR: tmp })
+    const leftovers = await killLeftovers(tmp)
+    if (leftovers) {
+        row.leftoverProcesses = leftovers
+    }
     await fs.rm(cwd, { recursive: true, force: true })
     await fs.rm(tmp, { recursive: true, force: true })
+    await fs.appendFile(runsFile, JSON.stringify(row) + '\n')
 
     console.log(`[${++done}/${plan.length}] ${check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass ? '' : check.detail}`)
 }
@@ -330,4 +335,36 @@ function withTmpDir<T extends { env?: Record<string, string | undefined>, mcpSer
         return [name, stdio.type === 'stdio' || stdio.type === undefined ? { ...stdio, env: { ...(stdio.env ?? {}), ...vars } } : server]
     }))
     return { ...options, env: { ...(options.env ?? process.env), ...vars }, ...(options.mcpServers && { mcpServers }) }
+}
+
+/**
+ * A tool that doesn't shut its browser down slows every later run. Browsers
+ * keep their profile in the run's TMPDIR, so whatever still mentions it on
+ * its command line belongs to this run; drivers whose parent is gone belong
+ * to no run. Returns how many processes had to be killed.
+ */
+async function killLeftovers (tmp: string): Promise<number> {
+    const { stdout } = await exec('ps', ['-axo', 'pid=,ppid=,command=']).catch(() => ({ stdout: '' }))
+    const pids = stdout.split('\n').flatMap((line) => {
+        const match = line.match(/^\s*(\d+)\s+(\d+)\s+(.*)$/)
+        if (!match) {
+            return []
+        }
+        const [, pid, ppid, command] = match
+        const orphanedDriver = ppid === '1' && /(?:^|\/)(?:chromedriver|geckodriver|msedgedriver)(?:\s|$)/.test(command)
+        return command.includes(tmp) || orphanedDriver ? [Number(pid)] : []
+    }).filter((pid) => pid !== process.pid)
+    for (const signal of ['SIGTERM', 'SIGKILL'] as const) {
+        for (const pid of pids) {
+            try {
+                process.kill(pid, signal)
+            } catch {
+                // already gone
+            }
+        }
+        if (signal === 'SIGTERM' && pids.length) {
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+        }
+    }
+    return pids.length
 }
