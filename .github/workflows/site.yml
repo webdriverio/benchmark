@@ -1,30 +1,42 @@
 name: Site
 
-# Builds benchmark.webdriver.io from results/ and deploys it to GitHub Pages.
+# Builds benchmark.webdriver.io from results/ and deploys it to Vercel
+# (project webdriverio-benchmark), the same way webdriver.io deploys:
+# build on GitHub Actions, upload the prebuilt output.
 #
 # The Benchmark workflow commits its results with GITHUB_TOKEN, and pushes
 # made with that token do not trigger other workflows. So besides pushes,
 # this also runs whenever a Benchmark run completes.
+#
+# Needs the VERCEL_TOKEN secret and the VERCEL_ORG_ID / VERCEL_PROJECT_ID
+# repository variables.
 
 on:
   push:
     branches: [main]
-    paths: [results/**, site/**, src/**, package.json, package-lock.json, .github/workflows/site.yml]
+    paths: [results/**, site/**, src/**, package.json, package-lock.json, vercel.json, .github/workflows/site.yml]
   workflow_run:
     workflows: [Benchmark]
     types: [completed]
   workflow_dispatch:
 
 concurrency:
-  group: pages
+  group: site
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://benchmark.webdriver.io
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      VERCEL_TELEMETRY_DISABLED: 1
     steps:
       - uses: actions/checkout@v5
         with:
@@ -34,21 +46,15 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm run site
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::error::Set the VERCEL_TOKEN secret and the VERCEL_ORG_ID / VERCEL_PROJECT_ID variables. Nothing was published."
+            exit 1
+          fi
+          npx --yes vercel@59 pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@59 build --prod --token="$VERCEL_TOKEN"
+          URL=$(npx --yes vercel@59 deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed $URL → https://benchmark.webdriver.io" >> "$GITHUB_STEP_SUMMARY"

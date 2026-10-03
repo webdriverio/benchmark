@@ -128,7 +128,7 @@ If Stagehand's tools call a model of their own, those tokens do not show up in t
 
 Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows the latest version of each tool, every version with per-task results and the runs behind it, and a log of all runs.
 
-The [Site workflow](.github/workflows/site.yml) deploys it to GitHub Pages on every push to `main` and after every Benchmark run. To preview locally:
+The [Site workflow](.github/workflows/site.yml) builds it and deploys it to Vercel (project `webdriverio-benchmark`) on every push to `main` and after every Benchmark run. It needs the `VERCEL_TOKEN` secret and the `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` repository variables. To preview locally:
 
 ```sh
 npm run site && npx serve dist
@@ -148,7 +148,7 @@ We will fix both gaps in WebdriverIO before publishing results, and say so in th
 
 ```
 .github/workflows/benchmark.yml   the benchmark workflow
-.github/workflows/site.yml        builds and deploys benchmark.webdriver.io
+.github/workflows/site.yml        builds and deploys benchmark.webdriver.io to Vercel
 src/run.ts        runner: installs tools, runs the plan, writes runs-*.jsonl and meta-*.json
 src/setups.ts     the five tool setups
 src/tools.ts      installs and pins the npm package behind each setup
