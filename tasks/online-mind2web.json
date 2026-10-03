@@ -1,0 +1,207 @@
+{
+  "dataset": "osunlp/Online-Mind2Web",
+  "revision": "eacad896a84dc5b65e29b0b06e4699ab0544d701",
+  "seed": 1,
+  "tasks": [
+    {
+      "task_id": "180ed2ec377ef3a4af9035a21522091a",
+      "level": "easy"
+    },
+    {
+      "task_id": "3dca7cbe7d086619d837ff9f5312cebc_110325",
+      "level": "easy"
+    },
+    {
+      "task_id": "29b7372d5a3884a2ba831af2d117af3c",
+      "level": "easy"
+    },
+    {
+      "task_id": "75a1b5dcd2c28508a971d98d51fe5767",
+      "level": "easy"
+    },
+    {
+      "task_id": "a6f0434ce6aff5f9b03681241b03ad82",
+      "level": "easy"
+    },
+    {
+      "task_id": "9829f3087ab1f9c8eba6b6dd2b831d25_112325",
+      "level": "easy"
+    },
+    {
+      "task_id": "f389398d2eeb29e5571e00439c57eb76",
+      "level": "easy"
+    },
+    {
+      "task_id": "d71be72aa25c3eab8eea47a0e60382e2",
+      "level": "easy"
+    },
+    {
+      "task_id": "47186fac8e7c7277af01144644eb4e0b_070826",
+      "level": "easy"
+    },
+    {
+      "task_id": "82eb3bfedd78456a0230b389f4e7a938",
+      "level": "easy"
+    },
+    {
+      "task_id": "4c572a627b53b0f9a734ab37f21819b8",
+      "level": "easy"
+    },
+    {
+      "task_id": "b6d10e9bd19b4009a02dea0e98f4e1ae",
+      "level": "easy"
+    },
+    {
+      "task_id": "f00e7accfb4a5e09680bdb326e6274ad",
+      "level": "easy"
+    },
+    {
+      "task_id": "9d46ccb915eff39ee1ae1e7328f5f20d",
+      "level": "medium"
+    },
+    {
+      "task_id": "56f8890a837c49f7df766b9c981646f3",
+      "level": "medium"
+    },
+    {
+      "task_id": "64b76158720a69e4a5c31a55d54928bf",
+      "level": "medium"
+    },
+    {
+      "task_id": "ba2a469af584f16da93ce6a7430cf7e5_070826",
+      "level": "medium"
+    },
+    {
+      "task_id": "c1d6ea6f2196d25782cc3646ff3090db",
+      "level": "medium"
+    },
+    {
+      "task_id": "11abb668c751dd56bb41f296a8bb3a13",
+      "level": "medium"
+    },
+    {
+      "task_id": "fa9adb815b85d259f943d81874a052e5",
+      "level": "medium"
+    },
+    {
+      "task_id": "4c186c6ed888d0c8d4cf4adb39443080",
+      "level": "medium"
+    },
+    {
+      "task_id": "070c907d34a4ce71dfdbea38f9c5d4d8",
+      "level": "medium"
+    },
+    {
+      "task_id": "690d7b4a285fdb1e9dabf973bf46ae4d",
+      "level": "medium"
+    },
+    {
+      "task_id": "84f806c7fc15576673915f195efa72df",
+      "level": "medium"
+    },
+    {
+      "task_id": "d1807551297ac60ecaaabbd2a2ed301a_110325",
+      "level": "medium"
+    },
+    {
+      "task_id": "59b7b990b4828bc305ab0d7ed6071b55",
+      "level": "medium"
+    },
+    {
+      "task_id": "b99c02965196d51e80ac7539e33f335b",
+      "level": "medium"
+    },
+    {
+      "task_id": "323bd85e3559655d89e5496b951a25e8",
+      "level": "medium"
+    },
+    {
+      "task_id": "c94551d2b18f9ad0ab31b0bd98ca42e3_121125",
+      "level": "medium"
+    },
+    {
+      "task_id": "fb7b4f784cfde003e2548fdf4e8d6b4f",
+      "level": "medium"
+    },
+    {
+      "task_id": "0a0fa834ce41b5297c6474293383759d_110325",
+      "level": "medium"
+    },
+    {
+      "task_id": "60cbbbd58eb9d28b053aef945f464228",
+      "level": "medium"
+    },
+    {
+      "task_id": "515f2e5811cfdd5e0e669e40f17886d8",
+      "level": "medium"
+    },
+    {
+      "task_id": "7072d09436972a5d5fe7476e3e9f1559",
+      "level": "medium"
+    },
+    {
+      "task_id": "d392e154c1c6ffbb26e2331c3afafc67",
+      "level": "medium"
+    },
+    {
+      "task_id": "65c4030f22fb6eb101acfee4825f1318",
+      "level": "medium"
+    },
+    {
+      "task_id": "864244b6969e0f8733b0eb1ca06cd51f",
+      "level": "medium"
+    },
+    {
+      "task_id": "27fa3ac20745d3d35e89fae157f63069",
+      "level": "hard"
+    },
+    {
+      "task_id": "9ed3827266b3b804f485859c3d00401e_070826",
+      "level": "hard"
+    },
+    {
+      "task_id": "6ebde509dca8f15c0fa1bd74f071e8d6",
+      "level": "hard"
+    },
+    {
+      "task_id": "ba01ea557b73f864c35ebba0dd6f3cb2",
+      "level": "hard"
+    },
+    {
+      "task_id": "fc53ddd3421411a41c1020a3fdc84ec4_070826",
+      "level": "hard"
+    },
+    {
+      "task_id": "5dec0e6620849459f29e6465982c597e",
+      "level": "hard"
+    },
+    {
+      "task_id": "a5c87cc1c94a090c9a8dc2c8b6a125d0",
+      "level": "hard"
+    },
+    {
+      "task_id": "442a450e696a96085257db6297891a4d",
+      "level": "hard"
+    },
+    {
+      "task_id": "7680a920359cb1a508fbddb001b98167",
+      "level": "hard"
+    },
+    {
+      "task_id": "c39d6c245f8243993e707d54d2f4acec",
+      "level": "hard"
+    },
+    {
+      "task_id": "987bad7c6d4726d64232a8a1c3386888",
+      "level": "hard"
+    },
+    {
+      "task_id": "824eb7bb0ef1ce40bfd49c12182d9428_070826",
+      "level": "hard"
+    },
+    {
+      "task_id": "1b867afecf072cb877ebfa4069263746",
+      "level": "hard"
+    }
+  ]
+}
