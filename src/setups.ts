@@ -15,6 +15,7 @@
  *
  * For development against unreleased code:
  *   WDIO_LOCAL=/path/to/webdriverio   a built checkout of webdriverio/webdriverio
+ *   WDIO_MCP_LOCAL=/path/to/mcp       a built checkout of webdriverio/mcp
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -134,7 +135,12 @@ export const SETUPS: Setup[] = [
             }
         }
     },
-    mcpSetup('wdio-mcp', 'WebdriverIO MCP', { pkg: '@wdio/mcp', env: 'WDIO_MCP_VERSION', bin: 'wdio-mcp' }),
+    {
+        ...mcpSetup('wdio-mcp', 'WebdriverIO MCP', { pkg: '@wdio/mcp', env: 'WDIO_MCP_VERSION', bin: 'wdio-mcp' }),
+        local: () => process.env.WDIO_MCP_LOCAL
+            ? { pkg: '@wdio/mcp', version: 'local build', binPath: path.join(process.env.WDIO_MCP_LOCAL, 'lib', 'server.js') }
+            : undefined
+    },
     {
         id: 'wdio-session',
         label: 'WebdriverIO session',
