@@ -3,7 +3,9 @@
  *
  * Side-by-side numbers for several result directories, e.g. the iterations
  * of a change against a baseline. One row per setup per directory, then a
- * per-task table of median tokens.
+ * per-task table of median tokens. "All 8 tasks" sums the per-task medians:
+ * what doing every task once typically costs, less skewed by which tasks
+ * happen to sit in the middle than a median across tasks.
  */
 import path from 'node:path'
 
@@ -26,11 +28,14 @@ for (const dir of dirs) {
     }
 }
 
-console.log('| Run | Setup | Success | Tokens med | Tokens mean | Cost med | Cost mean | Time med | Calls med |')
+const perTaskSum = (rows: Row[], value: (r: Row) => number) => [...new Set(rows.map((r) => r.task))]
+    .reduce((sum, task) => sum + median(rows.filter((r) => r.task === task).map(value)), 0)
+
+console.log('| Run | Setup | Success | All 8 tasks: tokens | All 8 tasks: cost | All 8 tasks: time | Tokens med | Tokens mean | Calls med |')
 console.log('|---|---|--:|--:|--:|--:|--:|--:|--:|')
 for (const { name, setup, rows } of sets) {
     const passed = rows.filter((r) => r.pass).length
-    console.log(`| ${name} | ${setup} | ${passed}/${rows.length} | ${k(median(rows.map((r) => r.tokens.total)))} | ${k(mean(rows.map((r) => r.tokens.total)))} | $${median(rows.map((r) => r.costUsd ?? 0)).toFixed(3)} | $${mean(rows.map((r) => r.costUsd ?? 0)).toFixed(3)} | ${(median(rows.map((r) => r.wallMs)) / 1000).toFixed(0)}s | ${median(rows.map((r) => r.toolCalls))} |`)
+    console.log(`| ${name} | ${setup} | ${passed}/${rows.length} | ${k(perTaskSum(rows, (r) => r.tokens.total))} | $${perTaskSum(rows, (r) => r.costUsd ?? 0).toFixed(2)} | ${(perTaskSum(rows, (r) => r.wallMs) / 1000).toFixed(0)}s | ${k(median(rows.map((r) => r.tokens.total)))} | ${k(mean(rows.map((r) => r.tokens.total)))} | ${median(rows.map((r) => r.toolCalls))} |`)
 }
 
 const tasks = [...new Set(sets.flatMap((s) => s.rows.map((r) => r.task)))]

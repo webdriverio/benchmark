@@ -149,6 +149,9 @@ export const SETUPS: Setup[] = [
                 tools: ['Bash', 'Skill', 'Read'],
                 allowedTools: ['Skill', 'Read'],
                 settingSources: ['project'],
+                // only its own skill: Claude Code's bundled skills (code-review,
+                // deep-research, …) would otherwise be listed on every turn
+                skills: ['wdio-session'],
                 env: { ...process.env, PATH: `${binDir}:${process.env.PATH}`, WDIO_SESSION: runId }
             }
         },
