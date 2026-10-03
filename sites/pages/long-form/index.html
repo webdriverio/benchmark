@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orbit · Account setup</title>
+<link rel="stylesheet" href="/shared.css">
+</head>
+<body>
+<header><strong>Orbit</strong> <span class="muted">Account setup</span></header>
+<main>
+  <p class="muted" id="progress"></p>
+  <form id="wizard" class="card"></form>
+  <section class="card">
+    <h2>Before you continue</h2>
+    <p class="step-help" id="help"></p>
+    <p class="step-help">Orbit stores the information you provide in data centers located in the region you select later in this setup. You can export or delete it at any time from the settings page. We never sell personal data to third parties, and we only share it with the sub-processors listed on our trust center, each of which is bound by a data processing agreement that is at least as strict as our own. If you have questions about how we handle your data, contact privacy@orbit.example.</p>
+  </section>
+</main>
+<script>
+const STEPS = [
+    { name: 'firstName', label: 'First name', help: 'Use the name you want your teammates to see in comments, mentions and notifications.' },
+    { name: 'lastName', label: 'Last name', help: 'Your last name appears on invoices and in exported audit logs.' },
+    { name: 'email', label: 'Work email', type: 'email', help: 'We send a confirmation link to this address. Personal email providers are not allowed for team workspaces.' },
+    { name: 'phone', label: 'Phone number', help: 'Only used for account recovery and two-factor authentication, never for marketing.' },
+    { name: 'street', label: 'Street address', help: 'The billing address printed on invoices. It must match the address of your payment method.' },
+    { name: 'city', label: 'City', help: 'Used to determine applicable taxes for your subscription.' },
+    { name: 'postalCode', label: 'Postal code', help: 'Postal codes are validated against the country you select in the next step.' },
+    { name: 'country', label: 'Country', options: ['Germany', 'France', 'Spain', 'United Kingdom', 'United States'], help: 'Determines the data region and the currency of your invoices.' },
+    { name: 'company', label: 'Company name', help: 'Shown on invoices and in the workspace switcher.' },
+    { name: 'jobTitle', label: 'Job title', help: 'Helps us tailor onboarding tips to your role.' },
+    { name: 'teamSize', label: 'Team size', options: ['1-10', '11-50', '51-200', '201-1000', '1000+'], help: 'Used to recommend a plan. You can change your plan at any time.' },
+    { name: 'referral', label: 'How did you hear about us?', options: ['Search engine', 'Conference', 'Colleague', 'Podcast', 'Social media'], help: 'Optional feedback that helps our marketing team. It does not affect your account.' }
+]
+const values = {}
+let index = 0
+const form = document.getElementById('wizard')
+function render () {
+    const step = STEPS[index]
+    document.getElementById('progress').textContent = `Step ${index + 1} of ${STEPS.length}`
+    document.getElementById('help').textContent = step.help
+    const control = step.options
+        ? `<select name="${step.name}" required><option value="">Select…</option>${step.options.map((o) => `<option>${o}</option>`).join('')}</select>`
+        : `<input name="${step.name}" type="${step.type ?? 'text'}" autocomplete="off" required>`
+    const last = index === STEPS.length - 1
+    form.innerHTML = `<h1>${step.label}</h1><label>${step.label} ${control}</label>
+        ${index > 0 ? '<button type="button" id="back">Back</button>' : ''}
+        <button type="submit">${last ? 'Finish setup' : 'Next'}</button>`
+    form.querySelector('[name]').value = values[step.name] ?? ''
+    form.querySelector('#back')?.addEventListener('click', () => { index--; render() })
+}
+form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const step = STEPS[index]
+    values[step.name] = form.querySelector('[name]').value
+    if (index < STEPS.length - 1) {
+        index++
+        return render()
+    }
+    const res = await fetch('/api/long-form/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'submit', data: values }) })
+    const { code } = await res.json()
+    form.innerHTML = `<h1>You're all set</h1><p role="status">Account created. Reference number: ${code}</p>`
+    document.getElementById('progress').textContent = 'Done'
+})
+render()
+</script>
+</body>
+</html>

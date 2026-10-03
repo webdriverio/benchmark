@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme Cloud · Upgrade</title>
+<link rel="stylesheet" href="/shared.css">
+</head>
+<body>
+<header><strong>Acme Cloud</strong> <span class="muted">Billing</span></header>
+<main>
+  <h1>Upgrade your workspace</h1>
+  <p class="muted">Billing details are handled by our payment partner in the secure form below.</p>
+  <!-- different site (127.0.0.1 vs localhost) → out-of-process iframe in Chrome -->
+  <iframe title="Billing" src="http://127.0.0.1:4101/iframe-form/frame.html" width="100%" height="480"></iframe>
+</main>
+</body>
+</html>
