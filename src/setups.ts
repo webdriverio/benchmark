@@ -4,17 +4,17 @@
  * WebFetch, WebSearch and every other built-in tool are switched off, and
  * permission mode `dontAsk` denies any tool call a setup does not allow.
  *
- * Each setup names the npm package it runs and the environment variable
- * that picks its version (default `latest`, see tools.ts):
+ * Each setup names the package it runs and the environment variable that
+ * picks its version (default `latest`, see tools.ts):
  *
  *   WDIO_VERSION            @wdio/cli, for `wdio session`
  *   WDIO_MCP_VERSION        @wdio/mcp
  *   PLAYWRIGHT_MCP_VERSION  @playwright/mcp
- *   STAGEHAND_MCP_VERSION   @browserbasehq/stagehand-mcp
+ *   STAGEHAND_REF           git ref of browserbase/stagehand; its Claude Code
+ *                           MCP server is not on npm, so it is built from source
  *
  * For development against unreleased code:
  *   WDIO_LOCAL=/path/to/webdriverio   a built checkout of webdriverio/webdriverio
- *   STAGEHAND_MCP="node /path/to/dist/index.js"   a local Stagehand MCP build
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -22,25 +22,29 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { Options } from '@anthropic-ai/claude-agent-sdk'
 
-import type { InstalledTool, ToolSpec } from './tools.ts'
+import type { GitToolSpec, InstalledTool, ToolSpec } from './tools.ts'
 
 const run = promisify(execFile)
 
 export interface Setup {
     id: string
     label: string
-    /** the npm package this setup runs */
-    tool: ToolSpec
+    /** the npm package (or repository) this setup runs */
+    tool: ToolSpec | GitToolSpec
     /** a local build to use instead of the npm package, if configured */
     local?: () => InstalledTool | undefined
     /** one or two sentences appended to the shared system prompt */
     note: string
+    /** instructions the tool's own integration gives its agent, appended after the note */
+    instructions?: (tool: InstalledTool) => Promise<string>
     /** build the Agent SDK options for one run in `cwd` */
     options: (tool: InstalledTool, cwd: string, runId: string) => Promise<Partial<Options>>
     /** clean up anything the run left behind (browsers, daemons) */
     cleanup?: (tool: InstalledTool, cwd: string, runId: string) => Promise<void>
 }
 
+// Stagehand's facade always launches a headed local browser; the workflow
+// gives every job a virtual display (xvfb-run) so all setups run the same way
 const HEADLESS = 'Use a headless browser.'
 
 function mcpSetup (id: string, label: string, tool: ToolSpec, args: string[] = []): Setup {
@@ -82,17 +86,44 @@ export const SETUPS: Setup[] = [
     mcpSetup('playwright-mcp', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated']),
     mcpSetup('playwright-mcp-tuned', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated', '--snapshot-mode', 'none', '--codegen', 'none']),
     {
-        // Stagehand's Claude Code integration: an MCP server with `run`,
-        // `snapshot` and `screenshot`, running a local browser
-        ...mcpSetup('stagehand', 'Stagehand', { pkg: '@browserbasehq/stagehand-mcp', env: 'STAGEHAND_MCP_VERSION' }),
-        local: () => process.env.STAGEHAND_MCP
-            ? { pkg: '@browserbasehq/stagehand-mcp', version: 'local build', binPath: process.env.STAGEHAND_MCP }
-            : undefined,
+        // Stagehand's Claude Code integration: the facade MCP server with
+        // `run`, `snapshot` and `screenshot`, wired up the way
+        // packages/integrations/claude-code/src/agent.ts does it
+        id: 'stagehand',
+        label: 'Stagehand',
+        tool: {
+            repo: 'browserbase/stagehand',
+            env: 'STAGEHAND_REF',
+            tagPrefix: '@browserbasehq/stagehand@',
+            versionFile: 'packages/sdk-ts/package.json',
+            build: [
+                ['npx', '--yes', 'pnpm@11', '--dir', '{dir}', 'install', '--frozen-lockfile'],
+                ['npx', '--yes', 'pnpm@11', '--dir', '{dir}', 'exec', 'turbo', 'run', 'build', '--filter', '@browserbasehq/stagehand-integrations']
+            ],
+            entry: 'packages/integrations/core/dist/facade/stdio-server.mjs'
+        },
+        note: `Use the Stagehand tools to control the browser. ${HEADLESS}`,
+        // their agent runs with FACADE_AGENT_INSTRUCTIONS as its system prompt
+        instructions: async ({ root }) => {
+            const facade = await import(path.join(root!, 'packages', 'integrations', 'core', 'dist', 'facade', 'index.mjs'))
+            return facade.FACADE_AGENT_INSTRUCTIONS as string
+        },
         options: async ({ binPath }) => {
-            const [command, ...args] = binPath.endsWith('.js') ? [process.execPath, binPath] : binPath.split(' ')
+            // like their buildAllowlistedEnv(): only STAGEHAND_* and BROWSERBASE_*
+            // reach the server, plus what a local Chrome needs. No
+            // STAGEHAND_MODEL_NAME and no provider keys, so the facade runs
+            // no model of its own and every token goes through the agent.
+            const env: Record<string, string> = { STAGEHAND_BROWSER: 'local' }
+            for (const [key, value] of Object.entries(process.env)) {
+                if (value && (/^(STAGEHAND_|BROWSERBASE_)/.test(key) || ['PATH', 'HOME', 'DISPLAY', 'TMPDIR'].includes(key))) {
+                    env[key] = value
+                }
+            }
+            delete env.STAGEHAND_MODEL_NAME
+            delete env.STAGEHAND_MODEL_API_KEY
             return {
                 tools: [],
-                mcpServers: { browser: { type: 'stdio', command, args, env: { ...process.env as Record<string, string>, STAGEHAND_ENV: 'LOCAL', HEADLESS: 'true' } } },
+                mcpServers: { browser: { type: 'stdio', command: process.execPath, args: [binPath], env } },
                 allowedTools: ['mcp__browser']
             }
         }

@@ -22,7 +22,7 @@ import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 import { startSites, resetSite } from './sites.ts'
 import { TASKS, parseAnswer } from './tasks.ts'
 import { SETUPS, type Setup } from './setups.ts'
-import { installTool, type InstalledTool } from './tools.ts'
+import { installGitTool, installTool, type InstalledTool } from './tools.ts'
 
 const exec = promisify(execFile)
 const ROOT = path.resolve(import.meta.dirname, '..')
@@ -118,7 +118,7 @@ for (const setup of selected) {
         break
     }
     try {
-        const tool = setup.local?.() ?? await installTool(setup.tool)
+        const tool = setup.local?.() ?? ('repo' in setup.tool ? await installGitTool(setup.tool) : await installTool(setup.tool))
         tools.set(setup.id, tool)
         console.log(`${setup.id.padEnd(22)} ${tool.pkg}@${tool.version}`)
     } catch (err) {
@@ -128,6 +128,12 @@ for (const setup of selected) {
 }
 
 const setups = args['dry-run'] ? selected : selected.filter((s) => tools.has(s.id))
+const instructions = new Map<string, string>()
+for (const setup of setups) {
+    if (!args['dry-run'] && setup.instructions) {
+        instructions.set(setup.id, await setup.instructions(tools.get(setup.id)!))
+    }
+}
 const plan = shuffle(
     setups.flatMap((setup) => tasks.flatMap((task) => Array.from({ length: Number(args.runs) }, (_, rep) => ({ setup, task, rep: rep + 1 })))),
     Number(args.seed)
@@ -141,6 +147,7 @@ if (args['dry-run']) {
 
 await fs.mkdir(outDir, { recursive: true })
 const runsFile = path.join(outDir, `runs-${label}.jsonl`)
+const transcriptDir = path.join(ROOT, 'transcripts', path.basename(outDir))
 const metaFile = path.join(outDir, `meta-${label}.json`)
 const meta = {
     startedAt: startedAt.toISOString(),
@@ -152,8 +159,8 @@ const meta = {
     timeoutMin: Number(args['timeout-min']),
     tasks: tasks.map((t) => t.id),
     setups: Object.fromEntries(selected.map((s: Setup) => [s.id, tools.has(s.id)
-        ? { pkg: tools.get(s.id)!.pkg, version: tools.get(s.id)!.version }
-        : { pkg: s.tool.pkg, skipped: skipped[s.id] }])),
+        ? { pkg: tools.get(s.id)!.pkg, version: tools.get(s.id)!.version, url: tools.get(s.id)!.url }
+        : { pkg: 'repo' in s.tool ? s.tool.repo : s.tool.pkg, skipped: skipped[s.id] }])),
     workflowRun: workflowRun(),
     commit: await gitSha(),
     environment: {
@@ -184,6 +191,7 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
     }
     let toolCalls = 0
     let result: Extract<SDKMessage, { type: 'result' }> | undefined
+    const transcript: SDKMessage[] = []
 
     try {
         const setupOptions = await setup.options(tool, cwd, runId)
@@ -192,7 +200,7 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
             options: {
                 model: args.model,
                 thinking: { type: 'disabled' },
-                systemPrompt: `${SYSTEM_PROMPT}\n\n${setup.note}`,
+                systemPrompt: [SYSTEM_PROMPT, setup.note, instructions.get(setup.id)].filter(Boolean).join('\n\n'),
                 cwd,
                 maxTurns: Number(args['max-turns']),
                 permissionMode: 'dontAsk',
@@ -202,6 +210,7 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
                 ...setupOptions
             }
         })) {
+            transcript.push(message)
             if (message.type === 'assistant') {
                 toolCalls += message.message.content.filter((block) => block.type === 'tool_use').length
             } else if (message.type === 'result') {
@@ -224,10 +233,14 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
         cacheRead: usage?.cache_read_input_tokens ?? 0,
         cacheCreation: usage?.cache_creation_input_tokens ?? 0
     }
+    // full transcripts can be megabytes: the workflow keeps them as an artifact, they are not committed
+    await fs.mkdir(transcriptDir, { recursive: true })
+    await fs.writeFile(path.join(transcriptDir, `${runId}.jsonl`), transcript.map((m) => JSON.stringify(m)).join('\n') + '\n')
     Object.assign(row, {
         pass: check.pass,
         detail: check.detail,
         answer,
+        finalMessage: text.length > 2000 ? `…${text.slice(-2000)}` : text,
         resultSubtype: result?.subtype,
         durationMs: result?.duration_ms,
         wallMs: Date.now() - started,

@@ -80,7 +80,9 @@ for (const { id, meta, rows } of runs) {
 const data = {
     generatedAt: new Date().toISOString(),
     repo: REPO,
-    setups: SETUPS.map((s) => ({ id: s.id, label: s.label, pkg: s.tool.pkg })),
+    setups: SETUPS.map((s) => 'repo' in s.tool
+        ? { id: s.id, label: s.label, pkg: s.tool.repo, link: `https://github.com/${s.tool.repo}` }
+        : { id: s.id, label: s.label, pkg: s.tool.pkg, link: `https://www.npmjs.com/package/${s.tool.pkg}` }),
     tasks: TASKS.map((t) => ({ id: t.id, kind: t.kind })),
     groups: [...groups.values()].filter((g) => g.rows.length).map((g) => ({
         setup: g.setup,

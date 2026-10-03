@@ -19,8 +19,8 @@ on:
       playwright-mcp:
         description: '@playwright/mcp version'
         default: latest
-      stagehand-mcp:
-        description: '@browserbasehq/stagehand-mcp version'
+      stagehand:
+        description: 'browserbase/stagehand git ref (branch, tag or sha) to build its Claude Code MCP server from; latest = newest release tag'
         default: latest
       model:
         description: Claude model for every agent
@@ -94,20 +94,29 @@ jobs:
           WDIO_VERSION: ${{ inputs.webdriverio }}
           WDIO_MCP_VERSION: ${{ inputs.wdio-mcp }}
           PLAYWRIGHT_MCP_VERSION: ${{ inputs.playwright-mcp }}
-          STAGEHAND_MCP_VERSION: ${{ inputs.stagehand-mcp }}
+          STAGEHAND_REF: ${{ inputs.stagehand }}
           SETUP: ${{ matrix.setup }}
           TASKS: ${{ inputs.tasks }}
           RUNS: ${{ inputs.runs }}
           MODEL: ${{ inputs.model }}
           SEED: ${{ inputs.seed }}
           OUT_DIR: results/${{ needs.plan.outputs.result-id }}
-        run: node src/run.ts --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --out-dir "$OUT_DIR"
+        # a virtual display for every job: Stagehand's facade always launches a
+        # headed browser, and the other setups should run under the same conditions
+        run: xvfb-run --auto-servernum node src/run.ts --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --out-dir "$OUT_DIR"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: results-${{ matrix.setup }}
           path: results/${{ needs.plan.outputs.result-id }}
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: transcripts-${{ matrix.setup }}
+          path: transcripts/${{ needs.plan.outputs.result-id }}
+          if-no-files-found: ignore
+          retention-days: 90
 
   publish:
     name: Publish results

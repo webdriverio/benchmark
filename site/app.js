@@ -141,7 +141,7 @@ function renderByVersion (data, groups) {
         }).join('')
         return `
         <div class="setup-block">
-            <div class="setup-head"><h3>${esc(setup.label)} <span class="muted mono" style="font-weight:400">${esc(setup.id)}</span></h3><a class="mono" href="https://www.npmjs.com/package/${esc(setup.pkg)}">${esc(setup.pkg)}</a></div>
+            <div class="setup-head"><h3>${esc(setup.label)} <span class="muted mono" style="font-weight:400">${esc(setup.id)}</span></h3><a class="mono" href="${esc(setup.link)}">${esc(setup.pkg)}</a></div>
             <div class="version-row head"><span>Version</span><span>Success</span><span>Tokens</span><span>Cost</span><span class="hide-sm">Time</span><span class="hide-sm">Runs</span><span class="hide-sm">Last run</span><span></span></div>
             ${rows}
         </div>`

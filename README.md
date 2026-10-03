@@ -8,7 +8,7 @@ This repository runs the eight tasks from Stagehand's study [Why Playwright MCP 
 |---|---|---|
 | `playwright-mcp` | [Playwright MCP](https://github.com/microsoft/playwright-mcp), default config | `@playwright/mcp` |
 | `playwright-mcp-tuned` | Playwright MCP with `--snapshot-mode none --codegen none` | `@playwright/mcp` |
-| `stagehand` | Stagehand's Claude Code MCP server (`run`, `snapshot`, `screenshot`) | `@browserbasehq/stagehand-mcp` |
+| `stagehand` | Stagehand's Claude Code MCP server (`run`, `snapshot`, `screenshot`) with its agent instructions | built from [`browserbase/stagehand`](https://github.com/browserbase/stagehand) |
 | `wdio-mcp` | [WebdriverIO MCP](https://webdriver.io/docs/mcp) | `@wdio/mcp` |
 | `wdio-session` | [`wdio session`](https://webdriver.io/docs/session) shell commands plus its agent skill | `@wdio/cli` |
 
@@ -56,7 +56,8 @@ Every agent ends with a line `ANSWER: <json>`. `npm run selftest` checks the che
 - **Same model and harness for every setup:** `claude-sonnet-5` with thinking disabled, through the Claude Agent SDK, as in Stagehand's study.
 - **Same prompts:** one system prompt for everyone. A setup only adds one sentence on how to reach the browser ([`src/setups.ts`](src/setups.ts)).
 - **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. `wdio-session` gets `Bash` restricted to `wdio session …` plus `Skill` and `Read`. Permission mode `dontAsk` denies everything else.
-- **Headless everywhere,** a fresh working directory per run, and the page state is reset before each run.
+- **Same browser conditions:** every setup asks for a headless local Chrome (Stagehand's facade only runs headed, so every workflow job gets the same virtual display), a fresh working directory per run, and the page state is reset before each run.
+- **Debuggable:** every result row keeps the agent's final message, and the workflow keeps every full transcript as an artifact for 90 days.
 - **Same machine type, no queueing:** in the workflow every setup runs in its own job on a fresh GitHub-hosted runner, all in parallel. Within a job the runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
 - **Exact versions:** every tool is installed before the first run, so install time never counts, and dist-tags like `latest` are resolved and recorded in the report.
 - **Everything is published:** code, prompts, checks and the raw JSONL of every run.
@@ -74,14 +75,14 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `webdriverio` | `latest` | `@wdio/cli` version for `wdio-session` |
 | `wdio-mcp` | `latest` | `@wdio/mcp` version |
 | `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
-| `stagehand-mcp` | `latest` | `@browserbasehq/stagehand-mcp` version |
+| `stagehand` | `latest` | git ref of `browserbase/stagehand` to build (branch, tag or sha); `latest` is the newest `@browserbasehq/stagehand@x.y.z` release tag |
 | `model` | `claude-sonnet-5` | model for every agent |
 | `runs` | `3` | runs per task and setup |
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
 | `seed` | `1` | seed for the run order |
 | `publish` | on | commit the results to this repository |
 
-Versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose package can't be installed is skipped, and the report says why.
+npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
 
 The workflow runs one job per setup in parallel, then a publish job:
 
@@ -105,11 +106,10 @@ npm run bench                                      # everything: 5 setups × 8 t
 node src/publish.ts results/<id>                   # report.md, results index, README section
 ```
 
-Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` and `STAGEHAND_MCP_VERSION` (default `latest` each). To test unreleased code:
+Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` and `STAGEHAND_REF` (default `latest` each). To test an unreleased WebdriverIO:
 
 ```sh
-export WDIO_LOCAL=/path/to/webdriverio                        # a built checkout of webdriverio/webdriverio
-export STAGEHAND_MCP="node /path/to/stagehand-mcp/dist/index.js"  # a local Stagehand MCP build
+export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio
 ```
 
 Runner options: `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10).
@@ -118,9 +118,15 @@ A full run is 120 agent runs. At Stagehand's reported $0.026–$0.051 per task, 
 
 ### Stagehand
 
-Stagehand's Claude Code integration runs `@browserbasehq/stagehand-mcp`, which is [not published to npm yet](https://github.com/browserbase/stagehand/pull/2971). Until it is, the workflow skips the `stagehand` setup; locally, build it from [browserbase/stagehand](https://github.com/browserbase/stagehand) and set `STAGEHAND_MCP`.
+Stagehand's Claude Code integration (the `run` / `snapshot` / `screenshot` facade from their study) is not published to npm yet ([browserbase/stagehand#2971](https://github.com/browserbase/stagehand/pull/2971)). The benchmark builds it from source exactly as [their README](https://github.com/browserbase/stagehand/tree/main/packages/integrations/claude-code) does (`pnpm install`, then `turbo run build --filter @browserbasehq/stagehand-integrations`), once per commit, before any run starts. Reports label it with the Stagehand SDK version and the commit, e.g. `4.1.0+cd7b230`.
 
-If Stagehand's tools call a model of their own, those tokens do not show up in the Agent SDK's usage. We will measure and report them separately before publishing any comparison.
+It is wired up like their own Claude Agent SDK example (`packages/integrations/claude-code/src/agent.ts`):
+
+- the agent gets their `FACADE_AGENT_INSTRUCTIONS` on top of the shared system prompt, the same way `wdio-session` gets its skill;
+- only `STAGEHAND_*` and `BROWSERBASE_*` variables reach the server (plus `PATH`, `HOME`, `DISPLAY` for a local Chrome), and `STAGEHAND_BROWSER=local`, so it runs the same local browser as everyone else instead of Browserbase's cloud;
+- no `STAGEHAND_MODEL_NAME` and no provider key reaches it, so the facade runs no model of its own and every token it costs shows up in the agent's usage.
+
+The facade always launches a headed browser. In the workflow every job runs under `xvfb-run`, so all setups get the same virtual display.
 
 ## Website
 

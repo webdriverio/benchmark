@@ -19,7 +19,7 @@ const RESULTS = path.join(ROOT, 'results')
 const REPO_URL = 'https://github.com/webdriverio/benchmark'
 const ORDER = SETUPS.map((s) => s.id)
 
-interface SetupMeta { pkg: string, version?: string, skipped?: string }
+interface SetupMeta { pkg: string, version?: string, url?: string, skipped?: string }
 interface Meta {
     startedAt: string
     finishedAt?: string
@@ -77,7 +77,9 @@ function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof r
     }
     const tools = Object.entries(meta.setups).map(([setup, s]) => {
         const label = SETUPS.find((x) => x.id === setup)?.label ?? setup
-        return `| \`${setup}\` | ${label} | [\`${s.pkg}\`](https://www.npmjs.com/package/${s.pkg}) | ${s.skipped ? '–' : `\`${s.version}\``} | ${s.skipped ? `⚠️ skipped: ${s.skipped}` : 'ran'} |`
+        const home = s.pkg.startsWith('@') || !s.pkg.includes('/') ? `https://www.npmjs.com/package/${s.pkg}` : `https://github.com/${s.pkg}`
+        const version = s.skipped ? '–' : s.url ? `[\`${s.version}\`](${s.url})` : `\`${s.version}\``
+        return `| \`${setup}\` | ${label} | [\`${s.pkg}\`](${home}) | ${version} | ${s.skipped ? `⚠️ skipped: ${s.skipped}` : 'ran'} |`
     })
     const taskList = meta.tasks.map((t) => {
         const task = TASKS.find((x) => x.id === t)
@@ -86,7 +88,7 @@ function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof r
 
     return `# Benchmark run ${id}
 
-Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.commit.slice(0, 7)}\`](${REPO_URL}/commit/${meta.commit}). Raw data: [\`runs-*.jsonl\`](.) (one line per agent run) and [\`meta.json\`](meta.json).
+Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.commit.slice(0, 7)}\`](${REPO_URL}/commit/${meta.commit}). Raw data: [\`runs-*.jsonl\`](.) (one line per agent run, including the agent's final message) and [\`meta.json\`](meta.json).${run ? ` Full agent transcripts: the \`transcripts-*\` artifacts of the [workflow run](${run.url}) (kept 90 days).` : ''}
 
 ## Configuration
 
