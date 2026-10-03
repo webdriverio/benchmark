@@ -206,7 +206,8 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     let timedOut: (() => void) | undefined
     const timeout = new Promise<'timeout'>((resolve) => { timedOut = () => resolve('timeout') })
     try {
-        const setupOptions = await setup.options(tool, cwd, runId)
+        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId), path.join(cwd, '.tmp'))
+        await fs.mkdir(path.join(cwd, '.tmp'), { recursive: true })
         const stream = query({
             prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
             options: {
@@ -310,3 +311,16 @@ await sites.close()
 meta.finishedAt = new Date().toISOString()
 await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
 console.log(`\nResults in ${path.relative(ROOT, outDir)}\nPublish: node src/publish.ts ${path.relative(ROOT, outDir)}`)
+
+/**
+ * Browsers that are killed instead of closed leave their profile (100+ MB)
+ * in TMPDIR. Pointing the agent and its MCP servers at a directory inside the
+ * run directory removes them together with the run.
+ */
+function withTmpDir<T extends { env?: Record<string, string | undefined>, mcpServers?: Record<string, unknown> }> (options: T, tmp: string): T {
+    const mcpServers = Object.fromEntries(Object.entries(options.mcpServers ?? {}).map(([name, server]) => {
+        const stdio = server as { type?: string, env?: Record<string, string> }
+        return [name, stdio.type === 'stdio' || stdio.type === undefined ? { ...stdio, env: { ...(stdio.env ?? {}), TMPDIR: tmp } } : server]
+    }))
+    return { ...options, env: { ...(options.env ?? process.env), TMPDIR: tmp }, ...(options.mcpServers && { mcpServers }) }
+}
