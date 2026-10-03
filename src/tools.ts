@@ -19,6 +19,8 @@ export interface ToolSpec {
     env: string
     /** binary to run, when the package has several */
     bin?: string
+    /** version used when `env` is unset (default `latest`) */
+    defaultVersion?: string
 }
 
 /**
@@ -59,7 +61,7 @@ export interface InstalledTool {
 const VERSION = /^[\w.^~<>=*|-]{1,64}$/
 
 export function requestedVersion (spec: ToolSpec) {
-    const version = process.env[spec.env]?.trim() || 'latest'
+    const version = process.env[spec.env]?.trim() || spec.defaultVersion || 'latest'
     if (!VERSION.test(version)) {
         throw new Error(`${spec.env}="${version}" is not a valid version or dist-tag`)
     }

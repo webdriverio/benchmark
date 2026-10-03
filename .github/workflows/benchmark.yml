@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
     inputs:
       webdriverio:
-        description: '@wdio/cli version for wdio session'
-        default: latest
+        description: '@wdio/cli version for wdio session (v10 and up; latest is still v9, which has no wdio session)'
+        default: next
       wdio-mcp:
         description: '@wdio/mcp version'
         default: latest
