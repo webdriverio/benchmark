@@ -23,6 +23,7 @@ import { promisify } from 'node:util'
 import type { Options } from '@anthropic-ai/claude-agent-sdk'
 
 import type { GitToolSpec, InstalledTool, ToolSpec } from './tools.ts'
+import { isWdioSessionCommand } from './permit.ts'
 
 const run = promisify(execFile)
 
@@ -39,20 +40,25 @@ export interface Setup {
     instructions?: (tool: InstalledTool) => Promise<string>
     /** build the Agent SDK options for one run in `cwd` */
     options: (tool: InstalledTool, cwd: string, runId: string) => Promise<Partial<Options>>
+    /**
+     * Tool calls this setup may make beyond its auto-approved `allowedTools`.
+     * Everything else is denied (see run.ts).
+     */
+    permit?: (toolName: string, input: Record<string, unknown>) => boolean
     /** clean up anything the run left behind (browsers, daemons) */
     cleanup?: (tool: InstalledTool, cwd: string, runId: string) => Promise<void>
 }
 
-// Stagehand's facade always launches a headed local browser; the workflow
-// gives every job a virtual display (xvfb-run) so all setups run the same way
-const HEADLESS = 'Use a headless browser.'
+// The prompts do not mention headless or headed: each tool picks its own
+// default (Playwright MCP is started with --headless, Stagehand's facade only
+// runs headed), and the workflow gives every job the same virtual display.
 
 function mcpSetup (id: string, label: string, tool: ToolSpec, args: string[] = []): Setup {
     return {
         id,
         label,
         tool,
-        note: `Use the ${label} tools to control the browser. ${HEADLESS}`,
+        note: `Use the ${label} tools to control the browser.`,
         options: async ({ binPath }) => ({
             tools: [],
             mcpServers: { browser: { type: 'stdio', command: process.execPath, args: [binPath, ...args] } },
@@ -102,7 +108,7 @@ export const SETUPS: Setup[] = [
             ],
             entry: 'packages/integrations/core/dist/facade/stdio-server.mjs'
         },
-        note: `Use the Stagehand tools to control the browser. ${HEADLESS}`,
+        note: 'Use the Stagehand tools to control the browser.',
         // their agent runs with FACADE_AGENT_INSTRUCTIONS as its system prompt
         instructions: async ({ root }) => {
             const facade = await import(path.join(root!, 'packages', 'integrations', 'core', 'dist', 'facade', 'index.mjs'))
@@ -136,16 +142,17 @@ export const SETUPS: Setup[] = [
         local: () => process.env.WDIO_LOCAL
             ? { pkg: '@wdio/cli', version: 'local build', binPath: path.join(process.env.WDIO_LOCAL, 'packages', 'wdio-cli', 'bin', 'wdio.js') }
             : undefined,
-        note: `Use the wdio-session skill: drive the browser with \`npx wdio session …\` shell commands. ${HEADLESS}`,
+        note: 'Use the wdio-session skill: drive the browser with `npx wdio session …` shell commands.',
         options: async ({ binPath }, cwd, runId) => {
             const binDir = await prepareWdioSession(binPath, cwd)
             return {
                 tools: ['Bash', 'Skill', 'Read'],
-                allowedTools: ['Bash(npx wdio session:*)', 'Bash(wdio session:*)', 'Skill', 'Read'],
+                allowedTools: ['Skill', 'Read'],
                 settingSources: ['project'],
                 env: { ...process.env, PATH: `${binDir}:${process.env.PATH}`, WDIO_SESSION: runId }
             }
         },
+        permit: (toolName, input) => toolName === 'Bash' && typeof input.command === 'string' && isWdioSessionCommand(input.command),
         cleanup: async ({ binPath }, cwd, runId) => {
             await run(process.execPath, [binPath, 'session', 'close', '-s', runId], { cwd }).catch(() => {})
         }

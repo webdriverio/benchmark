@@ -9,7 +9,7 @@
  * Every agent ends with one line `ANSWER: <json>`. A task passes when the
  * answer is right AND, for the local pages, the page recorded the action.
  */
-import { MAIN_ORIGIN, siteState } from './sites.ts'
+import { siteState } from './sites.ts'
 
 export interface Check {
     pass: boolean
@@ -20,8 +20,10 @@ export interface Task {
     id: string
     /** public site or one of our local pages */
     kind: 'public' | 'local'
+    /** `{base}` is replaced with where this run finds the local pages (see siteBase) */
     prompt: string
-    check: (answer: unknown) => Promise<Check>
+    /** `scope` is the run's page scope, for tasks that read what the page recorded */
+    check: (answer: unknown, scope?: string) => Promise<Check>
 }
 
 const ANSWER_FORMAT = 'When you are done, reply with a final line `ANSWER: <json>` where <json> is'
@@ -101,10 +103,10 @@ ${ANSWER_FORMAT} {"default": "<the default value as documented>"}.`,
     {
         id: 'iframe-form',
         kind: 'local',
-        prompt: `Open ${MAIN_ORIGIN}/iframe-form/. Fill in the billing form with the full name "Ada Lovelace", the email "ada@example.com" and the plan "Pro", accept the terms and start the subscription. Read the confirmation code it shows.
+        prompt: `Open {base}/iframe-form/. Fill in the billing form with the full name "Ada Lovelace", the email "ada@example.com" and the plan "Pro", accept the terms and start the subscription. Read the confirmation code it shows.
 ${ANSWER_FORMAT} {"code": "<confirmation code>"}.`,
-        check: async (answer) => {
-            const submit = siteState('iframe-form').findLast((e) => e.type === 'submit')
+        check: async (answer, scope) => {
+            const submit = siteState('iframe-form', scope).findLast((e) => e.type === 'submit')
             if (!submit) {
                 return fail('form was not submitted')
             }
@@ -118,10 +120,10 @@ ${ANSWER_FORMAT} {"code": "<confirmation code>"}.`,
     {
         id: 'closed-shadow',
         kind: 'local',
-        prompt: `Open ${MAIN_ORIGIN}/closed-shadow/. Apply the coupon code "SAVE20" to the headphones and read the new price.
+        prompt: `Open {base}/closed-shadow/. Apply the coupon code "SAVE20" to the headphones and read the new price.
 ${ANSWER_FORMAT} {"price": "<new price as shown>"}.`,
-        check: async (answer) => {
-            if (!siteState('closed-shadow').some((e) => e.type === 'coupon')) {
+        check: async (answer, scope) => {
+            if (!siteState('closed-shadow', scope).some((e) => e.type === 'coupon')) {
                 return fail('coupon was not applied')
             }
             return money(obj(answer).price) === 160 ? ok() : fail(`price ${obj(answer).price}`)
@@ -130,10 +132,10 @@ ${ANSWER_FORMAT} {"price": "<new price as shown>"}.`,
     {
         id: 'icon-no-role',
         kind: 'local',
-        prompt: `Open ${MAIN_ORIGIN}/icon-no-role/. Delete the invoice for "Contoso Ltd" (Invoice #1002) using its delete (trash can) icon. Do not touch any other invoice.
+        prompt: `Open {base}/icon-no-role/. Delete the invoice for "Contoso Ltd" (Invoice #1002) using its delete (trash can) icon. Do not touch any other invoice.
 ${ANSWER_FORMAT} {"remaining": ["<invoice numbers still listed, e.g. 1001>"]}.`,
-        check: async (answer) => {
-            const deletes = siteState('icon-no-role').filter((e) => e.type === 'delete').map((e) => e.data.id)
+        check: async (answer, scope) => {
+            const deletes = siteState('icon-no-role', scope).filter((e) => e.type === 'delete').map((e) => e.data.id)
             if (deletes.length !== 1 || deletes[0] !== '1002') {
                 return fail(`deleted ${JSON.stringify(deletes)}`)
             }
@@ -144,12 +146,12 @@ ${ANSWER_FORMAT} {"remaining": ["<invoice numbers still listed, e.g. 1001>"]}.`,
     {
         id: 'long-form',
         kind: 'local',
-        prompt: `Open ${MAIN_ORIGIN}/long-form/ and complete the 12-step account setup with these values:
+        prompt: `Open {base}/long-form/ and complete the 12-step account setup with these values:
 first name "Grace", last name "Hopper", work email "grace@navy.example", phone "+1 202 555 0143", street address "1 Harbor Way", city "Arlington", postal code "22201", country "United States", company name "Navy Research Lab", job title "Rear Admiral", team size "51-200", how did you hear about us "Conference".
 Read the reference number shown at the end.
 ${ANSWER_FORMAT} {"reference": "<reference number>"}.`,
-        check: async (answer) => {
-            const submit = siteState('long-form').findLast((e) => e.type === 'submit')
+        check: async (answer, scope) => {
+            const submit = siteState('long-form', scope).findLast((e) => e.type === 'submit')
             if (!submit) {
                 return fail('setup was not finished')
             }

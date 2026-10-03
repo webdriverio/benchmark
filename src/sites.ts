@@ -8,6 +8,10 @@
  *   POST /api/<task>/event   the page reports an action, returns { code }
  *   GET  /api/<task>/state   what happened so far, read by the task checks
  *   POST /api/<task>/reset   cleared before every run
+ *
+ * Everything is also served under /r/<scope>/…, with its own state, so runs
+ * of the same task can happen at the same time (`--concurrency`). The pages
+ * call the API with relative URLs, so they stay inside their scope.
  */
 import http from 'node:http'
 import fs from 'node:fs/promises'
@@ -34,13 +38,19 @@ export interface SiteEvent {
 }
 
 const state = new Map<string, SiteEvent[]>()
+const key = (task: string, scope = '') => `${scope}/${task}`
 
-export function siteState (task: string): SiteEvent[] {
-    return state.get(task) ?? []
+export function siteState (task: string, scope?: string): SiteEvent[] {
+    return state.get(key(task, scope)) ?? []
 }
 
-export function resetSite (task: string) {
-    state.delete(task)
+export function resetSite (task: string, scope?: string) {
+    state.delete(key(task, scope))
+}
+
+/** where a run finds the local pages: MAIN_ORIGIN, or its own /r/<scope> */
+export function siteBase (scope?: string) {
+    return scope ? `${MAIN_ORIGIN}/r/${scope}` : MAIN_ORIGIN
 }
 
 async function readBody (req: http.IncomingMessage) {
@@ -58,30 +68,33 @@ function send (res: http.ServerResponse, status: number, body: unknown, type = '
 
 async function handle (req: http.IncomingMessage, res: http.ServerResponse) {
     const url = new URL(req.url ?? '/', 'http://x')
-    const api = url.pathname.match(/^\/api\/([\w-]+)\/(event|state|reset)$/)
+    const scoped = url.pathname.match(/^\/r\/([\w-]+)(\/.*)$/)
+    const scope = scoped?.[1]
+    const pathname = scoped?.[2] ?? url.pathname
+    const api = pathname.match(/^\/api\/([\w-]+)\/(event|state|reset)$/)
     if (api) {
         const [, task, action] = api
         if (action === 'state') {
-            return send(res, 200, siteState(task))
+            return send(res, 200, siteState(task, scope))
         }
         if (req.method !== 'POST') {
             return send(res, 405, { error: 'POST only' })
         }
         if (action === 'reset') {
-            resetSite(task)
+            resetSite(task, scope)
             return send(res, 200, { ok: true })
         }
         const { type = 'event', data = {} } = await readBody(req)
         const event: SiteEvent = { type, data, code: crypto.randomBytes(3).toString('hex').toUpperCase(), at: Date.now() }
-        state.set(task, [...siteState(task), event])
+        state.set(key(task, scope), [...siteState(task, scope), event])
         return send(res, 200, { code: event.code })
     }
 
-    let file = path.join(PAGES, path.normalize(url.pathname))
+    let file = path.join(PAGES, path.normalize(pathname))
     if (!file.startsWith(PAGES)) {
         return send(res, 403, 'forbidden', 'text/plain')
     }
-    if (url.pathname.endsWith('/')) {
+    if (pathname.endsWith('/')) {
         file = path.join(file, 'index.html')
     }
     try {

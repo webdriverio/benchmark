@@ -27,7 +27,7 @@ document.getElementById('billing').addEventListener('submit', async (e) => {
     e.preventDefault()
     const form = new FormData(e.target)
     const data = { name: form.get('name'), email: form.get('email'), plan: form.get('plan'), terms: form.get('terms') === 'on' }
-    const res = await fetch('/api/iframe-form/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'submit', data }) })
+    const res = await fetch('../api/iframe-form/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'submit', data }) })
     const { code } = await res.json()
     document.getElementById('result').textContent = `Subscription started. Confirmation code: ${code}`
 })

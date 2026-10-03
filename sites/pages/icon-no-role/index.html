@@ -26,7 +26,7 @@ let invoices = [
 ]
 const status = document.getElementById('status')
 async function report (type, id) {
-    await fetch('/api/icon-no-role/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, data: { id } }) })
+    await fetch('../api/icon-no-role/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, data: { id } }) })
 }
 function render () {
     const list = document.getElementById('invoices')

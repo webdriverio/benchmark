@@ -125,6 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      statuses: read
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -156,6 +157,29 @@ jobs:
             git pull --rebase origin main && git push origin HEAD:main && exit 0
             sleep 5
           done
+          exit 1
+      - name: Wait for benchmark.webdriver.io
+        # Vercel's Git integration deploys every push to main; make sure this
+        # run's commit was deployed and the live site serves its results
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT_ID: ${{ needs.plan.outputs.result-id }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          for _ in $(seq 1 90); do
+            state=$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/status" --jq '[.statuses[] | select(.context == "Vercel")][0].state // ""')
+            if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
+              echo "::error::Vercel could not deploy $sha"
+              exit 1
+            fi
+            if [ "$state" = "success" ] && curl -fsS "https://benchmark.webdriver.io/data.json?ts=$(date +%s)" | grep -q "\"$RESULT_ID\""; then
+              echo "Live on [benchmark.webdriver.io](https://benchmark.webdriver.io) (commit \`${sha:0:7}\`)." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::benchmark.webdriver.io does not show $RESULT_ID 15 minutes after the push"
           exit 1
       - uses: actions/upload-artifact@v4
         if: ${{ !inputs.publish }}

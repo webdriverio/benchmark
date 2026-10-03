@@ -43,7 +43,7 @@ customElements.define('coupon-box', class extends HTMLElement {
                 return
             }
             error.textContent = ''
-            await fetch('/api/closed-shadow/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'coupon', data: { code } }) })
+            await fetch('../api/closed-shadow/event', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'coupon', data: { code } }) })
             document.getElementById('price').textContent = '$160.00'
             document.getElementById('discount').textContent = 'Coupon SAVE20 applied: 20% off.'
         })

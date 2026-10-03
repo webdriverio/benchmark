@@ -55,7 +55,8 @@ Every agent ends with a line `ANSWER: <json>`. `npm run selftest` checks the che
 
 - **Same model and harness for every setup:** `claude-sonnet-5` with thinking disabled, through the Claude Agent SDK, as in Stagehand's study.
 - **Same prompts:** one system prompt for everyone. A setup only adds one sentence on how to reach the browser ([`src/setups.ts`](src/setups.ts)).
-- **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. `wdio-session` gets `Bash` restricted to `wdio session …` plus `Skill` and `Read`. Permission mode `dontAsk` denies everything else.
+- **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. `wdio-session` gets `Skill`, `Read` and `Bash` for `wdio session …` commands only ([`src/permit.ts`](src/permit.ts): every part of a command must be a `wdio session` call, an `echo` piped into one or a read-only filter on its output; no substitutions, no redirects outside the run directory). Every other tool call is denied.
+- **No hints in the prompt:** the prompts don't mention headless or headed browsers or any tool's flags; each tool runs with its own defaults.
 - **Same browser conditions:** every setup asks for a headless local Chrome (Stagehand's facade only runs headed, so every workflow job gets the same virtual display), a fresh working directory per run, and the page state is reset before each run.
 - **Debuggable:** every result row keeps the agent's final message, and the workflow keeps every full transcript as an artifact for 90 days.
 - **Same machine type, no queueing:** in the workflow every setup runs in its own job on a fresh GitHub-hosted runner, all in parallel. Within a job the runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
@@ -88,7 +89,8 @@ The workflow runs one job per setup in parallel, then a publish job:
 
 1. writes `results/<date>-run-<id>/` with the raw `runs-*.jsonl`, the merged `meta.json` and a `report.md` (tool versions, configuration, results, every failed run, environment, and a link to the workflow run),
 2. updates the [index of all runs](results/README.md) and the **Latest results** section above,
-3. commits and pushes that as `results: <id>`.
+3. commits and pushes that as `results: <id>`,
+4. waits until Vercel has deployed that commit and [benchmark.webdriver.io](https://benchmark.webdriver.io) serves the new run, and fails otherwise.
 
 The report also appears on the workflow run's summary page. The workflow needs an `ANTHROPIC_API_KEY` repository secret.
 
@@ -112,7 +114,7 @@ Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` 
 export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio
 ```
 
-Runner options: `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10).
+Runner options: `--setups`, `--tasks`, `--runs` (default 3), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10), `--concurrency` (default 1; every run gets its own copy of the local pages under `/r/<run>/`, but parallel browsers compete for CPU, so keep 1 for published numbers).
 
 A full run is 120 agent runs. At Stagehand's reported $0.026–$0.051 per task, expect roughly $5–10 in model costs.
 

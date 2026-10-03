@@ -19,7 +19,7 @@ import { promisify } from 'node:util'
 import { parseArgs } from 'node:util'
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 
-import { startSites, resetSite } from './sites.ts'
+import { startSites, resetSite, siteBase } from './sites.ts'
 import { TASKS, parseAnswer } from './tasks.ts'
 import { SETUPS, type Setup } from './setups.ts'
 import { installGitTool, installTool, type InstalledTool } from './tools.ts'
@@ -43,6 +43,9 @@ const { values: args } = parseArgs({
         'out-dir': { type: 'string' },
         'max-turns': { type: 'string', default: '80' },
         'timeout-min': { type: 'string', default: '10' },
+        // runs at the same time; every run gets its own page scope (see sites.ts).
+        // Keep 1 for published numbers: parallel browsers compete for CPU.
+        concurrency: { type: 'string', default: '1' },
         'dry-run': { type: 'boolean', default: false }
     }
 })
@@ -176,12 +179,14 @@ await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
 const sites = await startSites()
 const runPrefix = `${label}-${startedAt.getTime()}`
 
-for (const [i, { setup, task, rep }] of plan.entries()) {
+let done = 0
+async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     const tool = tools.get(setup.id)!
     const runId = `${runPrefix}-${String(i + 1).padStart(3, '0')}`
     const cwd = path.join(ROOT, '.runs', runId)
     await fs.mkdir(cwd, { recursive: true })
-    resetSite(task.id)
+    const scope = `s${i + 1}`
+    resetSite(task.id, scope)
 
     const abortController = new AbortController()
     const timer = setTimeout(() => abortController.abort(), Number(args['timeout-min']) * 60_000)
@@ -196,14 +201,19 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
     try {
         const setupOptions = await setup.options(tool, cwd, runId)
         for await (const message of query({
-            prompt: task.prompt,
+            prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
             options: {
                 model: args.model,
                 thinking: { type: 'disabled' },
                 systemPrompt: [SYSTEM_PROMPT, setup.note, instructions.get(setup.id)].filter(Boolean).join('\n\n'),
                 cwd,
                 maxTurns: Number(args['max-turns']),
-                permissionMode: 'dontAsk',
+                // auto-approved tools come from the setup's allowedTools; anything
+                // else goes through its permit() and is denied otherwise
+                permissionMode: 'default',
+                canUseTool: async (toolName, input) => setup.permit?.(toolName, input)
+                    ? { behavior: 'allow', updatedInput: input }
+                    : { behavior: 'deny', message: `${toolName} is not available in this benchmark setup. Use the browser tools you were given.` },
                 disallowedTools: ['WebFetch', 'WebSearch'],
                 settingSources: [],
                 abortController,
@@ -225,7 +235,7 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
 
     const text = result?.subtype === 'success' ? result.result : ''
     const answer = parseAnswer(text)
-    const check = row.error ? { pass: false, detail: String(row.error) } : await task.check(answer)
+    const check = row.error ? { pass: false, detail: String(row.error) } : await task.check(answer, scope)
     const usage = result?.usage
     const tokens = {
         input: usage?.input_tokens ?? 0,
@@ -253,8 +263,15 @@ for (const [i, { setup, task, rep }] of plan.entries()) {
     await setup.cleanup?.(tool, cwd, runId)
     await fs.rm(cwd, { recursive: true, force: true })
 
-    console.log(`[${i + 1}/${plan.length}] ${check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass ? '' : check.detail}`)
+    console.log(`[${++done}/${plan.length}] ${check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass ? '' : check.detail}`)
 }
+
+const queue = [...plan.entries()]
+await Promise.all(Array.from({ length: Math.max(1, Number(args.concurrency)) }, async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) {
+        await runOne(...next)
+    }
+}))
 
 await sites.close()
 meta.finishedAt = new Date().toISOString()
