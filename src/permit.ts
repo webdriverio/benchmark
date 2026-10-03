@@ -19,6 +19,8 @@
 const WDIO_SESSION = /^(npx\s+(?:(?:--yes|-y)\s+)?)?wdio\s+session(?:\s|$)/
 const FEED = /^(echo|printf)(?:\s|$)/
 const FILTER = /^(head|tail|grep|wc|sort|jq)(?:\s|$)/
+// other tools have their own waits; a plain sleep between commands is harmless
+const SLEEP = /^sleep\s+\d+(\.\d+)?$/
 const SUBSTITUTION = /`|\$\(|<\(|>\(/
 
 function safeRedirectTarget (target: string) {
@@ -64,7 +66,7 @@ export function isWdioSessionCommand (command: string): boolean {
         const after = tokens[i + 1]
         if (WDIO_SESSION.test(part)) {
             sawWdio = true
-        } else if (!(FEED.test(part) && after === '|') && !(FILTER.test(part) && before === '|' && readsOnlyThePipe(part))) {
+        } else if (!SLEEP.test(part) && !(FEED.test(part) && after === '|') && !(FILTER.test(part) && before === '|' && readsOnlyThePipe(part))) {
             return false
         }
     }

