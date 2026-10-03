@@ -205,9 +205,11 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     // call can keep the stream open), so the timeout also ends the iterator
     let timedOut: (() => void) | undefined
     const timeout = new Promise<'timeout'>((resolve) => { timedOut = () => resolve('timeout') })
+    // short on purpose: tools put Unix sockets in TMPDIR, and macOS limits
+    // their paths to 104 characters
+    const tmp = await fs.mkdtemp('/tmp/wb-')
     try {
-        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId), path.join(cwd, '.tmp'))
-        await fs.mkdir(path.join(cwd, '.tmp'), { recursive: true })
+        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId), tmp)
         const stream = query({
             prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
             options: {
@@ -296,6 +298,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     await fs.appendFile(runsFile, JSON.stringify(row) + '\n')
     await setup.cleanup?.(tool, cwd, runId)
     await fs.rm(cwd, { recursive: true, force: true })
+    await fs.rm(tmp, { recursive: true, force: true })
 
     console.log(`[${++done}/${plan.length}] ${check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass ? '' : check.detail}`)
 }
@@ -314,8 +317,8 @@ console.log(`\nResults in ${path.relative(ROOT, outDir)}\nPublish: node src/publ
 
 /**
  * Browsers that are killed instead of closed leave their profile (100+ MB)
- * in TMPDIR. Pointing the agent and its MCP servers at a directory inside the
- * run directory removes them together with the run. Downloaded drivers stay
+ * in TMPDIR. Pointing the agent and its MCP servers at a directory of their
+ * own removes them together with the run. Downloaded drivers stay
  * in the shared cache: WebdriverIO keeps them in TMPDIR unless
  * WEBDRIVER_CACHE_DIR says otherwise, and a download in every run would be
  * counted as the tool's time.
