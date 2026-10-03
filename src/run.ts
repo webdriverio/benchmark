@@ -222,6 +222,20 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
                     ? { behavior: 'allow', updatedInput: input }
                     : { behavior: 'deny', message: `${toolName} is not available in this benchmark setup. Use the browser tools you were given.` },
                 disallowedTools: ['WebFetch', 'WebSearch'],
+                // Claude Code approves read-only shell commands (cat, ls, grep …)
+                // on its own before canUseTool is asked; this hook runs first,
+                // so a Bash call is allowed exactly when the setup permits it
+                hooks: setup.permit ? {
+                    PreToolUse: [{
+                        matcher: 'Bash',
+                        hooks: [async (input) => {
+                            const toolInput = (input as { tool_input?: Record<string, unknown> }).tool_input ?? {}
+                            return setup.permit!('Bash', toolInput)
+                                ? {}
+                                : { hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: 'Only `wdio session …` commands are available in this benchmark setup.' } }
+                        }]
+                    }]
+                } : undefined,
                 settingSources: [],
                 abortController,
                 ...setupOptions
