@@ -12,10 +12,10 @@ on:
     inputs:
       webdriverio:
         description: '@wdio/cli version for wdio session (v10 and up; latest is still v9, which has no wdio session)'
-        default: next
+        default: 10.0.0-alpha.155
       wdio-mcp:
         description: '@wdio/mcp version'
-        default: latest
+        default: 4.0.0-dev.56
       playwright-mcp:
         description: '@playwright/mcp version'
         default: latest

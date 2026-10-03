@@ -136,7 +136,8 @@ export const SETUPS: Setup[] = [
         }
     },
     {
-        ...mcpSetup('wdio-mcp', 'WebdriverIO MCP', { pkg: '@wdio/mcp', env: 'WDIO_MCP_VERSION', bin: 'wdio-mcp' }),
+        // dev build of webdriverio/mcp#155 (page model from @wdio/session) until it is released
+        ...mcpSetup('wdio-mcp', 'WebdriverIO MCP', { pkg: '@wdio/mcp', env: 'WDIO_MCP_VERSION', bin: 'wdio-mcp', defaultVersion: '4.0.0-dev.56' }),
         local: () => process.env.WDIO_MCP_LOCAL
             ? { pkg: '@wdio/mcp', version: 'local build', binPath: path.join(process.env.WDIO_MCP_LOCAL, 'lib', 'server.js') }
             : undefined
@@ -144,8 +145,8 @@ export const SETUPS: Setup[] = [
     {
         id: 'wdio-session',
         label: 'WebdriverIO session',
-        // `wdio session` ships with v10, which is on `next` until its release
-        tool: { pkg: '@wdio/cli', env: 'WDIO_VERSION', bin: 'wdio', defaultVersion: 'next' },
+        // `wdio session` ships with v10, which is in alpha until its release
+        tool: { pkg: '@wdio/cli', env: 'WDIO_VERSION', bin: 'wdio', defaultVersion: '10.0.0-alpha.155' },
         local: () => process.env.WDIO_LOCAL
             ? { pkg: '@wdio/cli', version: 'local build', binPath: path.join(process.env.WDIO_LOCAL, 'packages', 'wdio-cli', 'bin', 'wdio.js') }
             : undefined,

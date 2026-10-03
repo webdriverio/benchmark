@@ -108,7 +108,7 @@ npm run bench                                      # everything: 5 setups × 8 t
 node src/publish.ts results/<id>                   # report.md, results index, README section
 ```
 
-Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` and `STAGEHAND_REF` (default `latest` each, except `WDIO_VERSION`: `next`, since `wdio session` ships with v10). To test an unreleased WebdriverIO:
+Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION` and `STAGEHAND_REF` (default `latest`, except `WDIO_VERSION`: `10.0.0-alpha.155`, since `wdio session` ships with v10, and `WDIO_MCP_VERSION`: `4.0.0-dev.56`, a dev build of the MCP server with the `@wdio/session` page model). To test an unreleased WebdriverIO:
 
 ```sh
 export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio
