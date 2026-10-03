@@ -1,0 +1,39 @@
+{
+  "startedAt": "2026-10-03T21:45:46.400Z",
+  "finishedAt": "2026-10-03T21:57:48.771Z",
+  "model": "claude-sonnet-5",
+  "runsPerTask": 3,
+  "seed": 1,
+  "maxTurns": 80,
+  "timeoutMin": 10,
+  "tasks": [
+    "saucedemo-checkout",
+    "books-cheapest",
+    "wikipedia-hops",
+    "nodejs-docs-fact",
+    "iframe-form",
+    "closed-shadow",
+    "icon-no-role",
+    "long-form"
+  ],
+  "setups": {
+    "stagehand": {
+      "pkg": "browserbase/stagehand",
+      "version": "4.1.0+cd7b230",
+      "url": "https://github.com/browserbase/stagehand/tree/cd7b230778cf92269e4cb90e80d97f5113781c51"
+    }
+  },
+  "workflowRun": {
+    "url": "https://github.com/webdriverio/benchmark/actions/runs/37156195130",
+    "id": "37156195130",
+    "attempt": "1"
+  },
+  "commit": "52c9ae9a785bb2a94a0b114a04b89fe692d82c7f",
+  "environment": {
+    "os": "Linux 6.17.0-1022-azure (x64)",
+    "cpus": "4× AMD EPYC 9V74 80-Core Processor",
+    "node": "v24.21.0",
+    "chrome": "Google Chrome 154.0.8037.57",
+    "agentSdk": "0.3.288"
+  }
+}

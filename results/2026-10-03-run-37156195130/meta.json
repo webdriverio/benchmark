@@ -1,0 +1,96 @@
+{
+  "startedAt": "2026-10-03T21:45:44.254Z",
+  "finishedAt": "2026-10-03T22:01:14.502Z",
+  "model": "claude-sonnet-5",
+  "runsPerTask": 3,
+  "seed": 1,
+  "maxTurns": 80,
+  "timeoutMin": 10,
+  "tasks": [
+    "saucedemo-checkout",
+    "books-cheapest",
+    "wikipedia-hops",
+    "nodejs-docs-fact",
+    "iframe-form",
+    "closed-shadow",
+    "icon-no-role",
+    "long-form"
+  ],
+  "setups": {
+    "playwright-mcp": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "playwright-mcp-tuned": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "stagehand": {
+      "pkg": "browserbase/stagehand",
+      "version": "4.1.0+cd7b230",
+      "url": "https://github.com/browserbase/stagehand/tree/cd7b230778cf92269e4cb90e80d97f5113781c51"
+    },
+    "wdio-mcp": {
+      "pkg": "@wdio/mcp",
+      "version": "3.14.0",
+      "url": "https://www.npmjs.com/package/@wdio/mcp/v/3.14.0"
+    },
+    "wdio-session": {
+      "pkg": "@wdio/cli",
+      "version": "10.0.0-alpha.155",
+      "url": "https://www.npmjs.com/package/@wdio/cli/v/10.0.0-alpha.155"
+    }
+  },
+  "workflowRun": {
+    "url": "https://github.com/webdriverio/benchmark/actions/runs/37156195130",
+    "id": "37156195130",
+    "attempt": "1"
+  },
+  "commit": "52c9ae9a785bb2a94a0b114a04b89fe692d82c7f",
+  "environment": {
+    "os": "Linux 6.17.0-1022-azure (x64)",
+    "cpus": "4× AMD EPYC 7763 64-Core Processor",
+    "node": "v24.21.0",
+    "chrome": "Google Chrome 154.0.8037.57",
+    "agentSdk": "0.3.288"
+  },
+  "environments": {
+    "playwright-mcp": {
+      "os": "Linux 6.17.0-1022-azure (x64)",
+      "cpus": "4× Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+      "node": "v24.21.0",
+      "chrome": "Google Chrome 154.0.8037.57",
+      "agentSdk": "0.3.288"
+    },
+    "playwright-mcp-tuned": {
+      "os": "Linux 6.17.0-1022-azure (x64)",
+      "cpus": "4× AMD EPYC 7763 64-Core Processor",
+      "node": "v24.21.0",
+      "chrome": "Google Chrome 154.0.8037.57",
+      "agentSdk": "0.3.288"
+    },
+    "stagehand": {
+      "os": "Linux 6.17.0-1022-azure (x64)",
+      "cpus": "4× AMD EPYC 9V74 80-Core Processor",
+      "node": "v24.21.0",
+      "chrome": "Google Chrome 154.0.8037.57",
+      "agentSdk": "0.3.288"
+    },
+    "wdio-mcp": {
+      "os": "Linux 6.17.0-1022-azure (x64)",
+      "cpus": "4× AMD EPYC 7763 64-Core Processor",
+      "node": "v24.21.0",
+      "chrome": "Google Chrome 154.0.8037.57",
+      "agentSdk": "0.3.288"
+    },
+    "wdio-session": {
+      "os": "Linux 6.17.0-1022-azure (x64)",
+      "cpus": "4× AMD EPYC 7763 64-Core Processor",
+      "node": "v24.21.0",
+      "chrome": "Google Chrome 154.0.8037.57",
+      "agentSdk": "0.3.288"
+    }
+  }
+}

@@ -17,7 +17,19 @@ The first three are the setups from Stagehand's post. We run them ourselves inst
 ## Latest results
 
 <!-- results:start -->
-No published run yet. Start one from the [Benchmark workflow](../../actions/workflows/benchmark.yml).
+Latest run: [2026-10-03-run-37156195130](results/2026-10-03-run-37156195130/report.md) on 2026-10-03, `claude-sonnet-5`, 3 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37156195130). All runs: [results](results/README.md).
+
+| Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
+|---|--:|--:|--:|--:|--:|
+| playwright-mcp | 93k | $0.043 | 100% (24/24) | 23 s | 9 |
+| playwright-mcp-tuned | 88k | $0.044 | 100% (24/24) | 21 s | 9 |
+| stagehand | 62k | $0.038 | 100% (24/24) | 18 s | 8 |
+| wdio-mcp | 199k | $0.070 | 100% (24/24) | 19 s | 13.5 |
+| wdio-session | 77k | $0.040 | 100% (24/24) | 21 s | 6.5 |
+
+_Medians per run, except success. Tokens include cache reads and writes._
+
+Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@3.14.0` · wdio-session: `@wdio/cli@10.0.0-alpha.155`
 <!-- results:end -->
 
 ## What is measured
