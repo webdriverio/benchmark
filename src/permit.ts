@@ -1,6 +1,6 @@
 /**
  * Decides which shell commands the agent of a command-line setup
- * (`wdio session`, agent-browser) may run.
+ * (`wdio session`, agent-browser, playwright-cli) may run.
  *
  * Claude Code's `Bash(prefix:*)` allow rules reject commands they can't
  * parse with certainty, e.g. an unquoted `Selenium_(software)` in a URL, and
@@ -24,6 +24,10 @@ const WDIO_SESSION = /^(npx\s+(?:(?:--yes|-y)\s+)?)?wdio\s+session(?:\s|$)/
 // not the commands that change the machine instead of the page, start a
 // server, or hand the task to another model (`chat`, whose tokens we can't count)
 const AGENT_BROWSER = /^(npx\s+(?:(?:--yes|-y)\s+)?)?agent-browser(?:\s|$)(?!\s*(?:install|upgrade|plugin|chat|dashboard)(?:\s|$))/
+// not the commands that install things, open a dashboard window, or reach
+// browsers outside the run (`kill-all` kills every browser process)
+// (anywhere in the call, so a global option like `-s=name` in front doesn't hide them)
+const PLAYWRIGHT_CLI = /^(npx\s+(?:(?:--yes|-y)\s+)?)?playwright-cli(?:\s|$)(?!(?:.*\s)?(?:install(?:-[\w-]+)?|show|kill-all|delete-data)(?:\s|$))/
 const FEED = /^(echo|printf)(?:\s|$)/
 const FILTER = /^(head|tail|grep|wc|sort|jq)(?:\s|$)/
 // other tools have their own waits; a plain sleep between commands is harmless
@@ -57,6 +61,7 @@ function readsOnlyThePipe (part: string) {
 
 export const isWdioSessionCommand = (command: string) => isCommandOf(WDIO_SESSION, command)
 export const isAgentBrowserCommand = (command: string) => isCommandOf(AGENT_BROWSER, command)
+export const isPlaywrightCliCommand = (command: string) => isCommandOf(PLAYWRIGHT_CLI, command)
 
 /**
  * Reads the command left to right the way the shell quotes it: single-quoted

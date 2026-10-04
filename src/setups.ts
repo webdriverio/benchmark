@@ -10,6 +10,7 @@
  *   WDIO_VERSION            @wdio/cli, for `wdio session`
  *   WDIO_MCP_VERSION        @wdio/mcp
  *   PLAYWRIGHT_MCP_VERSION  @playwright/mcp
+ *   PLAYWRIGHT_CLI_VERSION  @playwright/cli
  *   STAGEHAND_REF           git ref of browserbase/stagehand; its Claude Code
  *                           MCP server is not on npm, so it is built from source
  *
@@ -25,7 +26,7 @@ import { promisify } from 'node:util'
 import type { Options } from '@anthropic-ai/claude-agent-sdk'
 
 import type { GitToolSpec, InstalledTool, ToolSpec } from './tools.ts'
-import { isAgentBrowserCommand, isWdioSessionCommand } from './permit.ts'
+import { isAgentBrowserCommand, isPlaywrightCliCommand, isWdioSessionCommand } from './permit.ts'
 
 const run = promisify(execFile)
 
@@ -148,6 +149,27 @@ async function prepareAgentBrowser (bin: string, cwd: string) {
     return binDir
 }
 
+/**
+ * The run directory gets a `playwright-cli` binary and the skill its own
+ * `playwright-cli install --skills` installs. Its browsers belong to the
+ * workspace (the run directory), so `close-all` doesn't reach other runs.
+ * With screenshots on, the workspace config adds a debugging port, as for
+ * Playwright MCP; nothing else about the setup changes.
+ */
+async function preparePlaywrightCli (bin: string, cwd: string, screenshots: boolean) {
+    const binDir = path.join(cwd, 'node_modules', '.bin')
+    await fs.mkdir(binDir, { recursive: true })
+    const shim = path.join(binDir, 'playwright-cli')
+    await fs.writeFile(shim, `#!/bin/sh\nexec "${process.execPath}" "${bin}" "$@"\n`)
+    await fs.chmod(shim, 0o755)
+    await run(process.execPath, [bin, 'install', '--skills'], { cwd })
+    if (screenshots) {
+        await fs.mkdir(path.join(cwd, '.playwright'), { recursive: true })
+        await fs.writeFile(path.join(cwd, '.playwright', 'cli.config.json'), JSON.stringify({ browser: { launchOptions: { args: ['--remote-debugging-port=0'] } } }))
+    }
+    return binDir
+}
+
 export const SETUPS: Setup[] = [
     mcpSetup('playwright-mcp', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated'], playwrightDebugPort),
     mcpSetup('playwright-mcp-tuned', 'Playwright MCP', PLAYWRIGHT_MCP, ['--headless', '--isolated', '--snapshot-mode', 'none', '--codegen', 'none'], playwrightDebugPort),
@@ -259,6 +281,28 @@ export const SETUPS: Setup[] = [
             const sockets = agentBrowserSockets(runId)
             await run(process.execPath, [binPath, 'close', '--all'], { cwd, env: { ...env, AGENT_BROWSER_SOCKET_DIR: sockets } }).catch(() => {})
             await fs.rm(sockets, { recursive: true, force: true })
+        }
+    },
+    {
+        id: 'playwright-cli',
+        label: 'Playwright CLI',
+        tool: { pkg: '@playwright/cli', env: 'PLAYWRIGHT_CLI_VERSION', bin: 'playwright-cli' },
+        note: 'Use the playwright-cli skill: drive the browser with `playwright-cli …` shell commands.',
+        options: async ({ binPath }, cwd, _runId, run) => {
+            const binDir = await preparePlaywrightCli(binPath, cwd, run.screenshots)
+            return {
+                // Read: the CLI saves snapshots as files the agent reads
+                tools: ['Bash', 'Skill', 'Read'],
+                allowedTools: ['Skill', 'Read'],
+                settingSources: ['project'],
+                skills: ['playwright-cli'],
+                env: { ...process.env, PATH: `${binDir}:${process.env.PATH}` }
+            }
+        },
+        permit: (toolName, input) => toolName === 'Bash' && typeof input.command === 'string' && isPlaywrightCliCommand(input.command),
+        permitHint: 'Only `playwright-cli …` commands are available in this benchmark setup.',
+        cleanup: async ({ binPath }, cwd, _runId, env) => {
+            await run(process.execPath, [binPath, 'close-all'], { cwd, env }).catch(() => {})
         }
     }
 ]

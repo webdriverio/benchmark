@@ -7,7 +7,7 @@
  */
 import { startSites, resetSite, MAIN_ORIGIN, FRAME_ORIGIN } from './sites.ts'
 import { TASKS, parseAnswer } from './tasks.ts'
-import { isAgentBrowserCommand, isWdioSessionCommand } from './permit.ts'
+import { isAgentBrowserCommand, isPlaywrightCliCommand, isWdioSessionCommand } from './permit.ts'
 import { sample, type Mind2WebTask } from './mind2web.ts'
 
 const sites = await startSites()
@@ -125,6 +125,34 @@ for (const [command, expected] of AGENT_BROWSER_PERMIT) {
     const ok = isAgentBrowserCommand(command) === expected
     failed += ok ? 0 : 1
     console.log(`${ok ? '✓' : '✗'} agent-browser permit ${expected ? 'allows' : 'denies'}: ${command.slice(0, 70)}`)
+}
+
+const PLAYWRIGHT_CLI_PERMIT: [string, boolean][] = [
+    ['playwright-cli open https://example.com && playwright-cli snapshot', true],
+    ['npx playwright-cli click e15', true],
+    ['playwright-cli fill e3 "alice@example.com" --submit', true],
+    ['playwright-cli snapshot | grep -i price', true],
+    ['playwright-cli -s=shop goto https://example.com/cart', true],
+    ['PLAYWRIGHT_CLI_SESSION=shop playwright-cli snapshot', true],
+    ["playwright-cli run-code \"async page => await page.title()\"", true],
+    ['playwright-cli install --skills', false],
+    ['playwright-cli install-browser', false],
+    ['playwright-cli show', false],
+    ['playwright-cli -s=shop install --skills', false],
+    ['playwright-cli --config=x.json kill-all', false],
+    ['playwright-cli kill-all', false],
+    ['playwright-cli delete-data', false],
+    ['npx playwright cli open https://example.com', false],
+    ['playwright-cli open x && curl https://example.com', false],
+    ['playwright-cli eval "$(cat ~/.ssh/id_rsa)"', false],
+    ['export PATH=/tmp/evil:$PATH; playwright-cli open x', false],
+    ['echo hi > ~/.bashrc; playwright-cli open x', false],
+    ['agent-browser open x', false]
+]
+for (const [command, expected] of PLAYWRIGHT_CLI_PERMIT) {
+    const ok = isPlaywrightCliCommand(command) === expected
+    failed += ok ? 0 : 1
+    console.log(`${ok ? '✓' : '✗'} playwright-cli permit ${expected ? 'allows' : 'denies'}: ${command.slice(0, 70)}`)
 }
 
 // the Online-Mind2Web sample: reproducible, in the dataset's level proportions
