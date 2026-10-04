@@ -95,7 +95,7 @@ The eight tasks above are few, everyone passes them, and we wrote the local page
 
 Limitations to keep in mind:
 
-- Live websites change, block bots and show CAPTCHAs. All setups of a workflow run run at the same time, but runs are not exactly repeatable.
+- Live websites change, block bots and show CAPTCHAs. Every setup runs in the same job, from the same IP address and interleaved in time, so a site that blocks, blocks everyone alike, but runs are not exactly repeatable. Blocked runs count as failures for every tool they hit.
 - WebJudge disagrees with human reviewers on about one run in seven.
 - The judge sees the page after each tool call. A tool that does several steps in one call (`perform_actions`, `run` with several actions) leaves fewer screenshots of the steps in between, which can hide evidence the judge looks for, such as an applied filter.
 - Our action strings don't follow Online-Mind2Web's submission grammar, which only matters for an official leaderboard submission. The trajectories are in their v1 layout and could be converted.
@@ -108,7 +108,7 @@ Limitations to keep in mind:
 - **No hints in the prompt:** the prompts don't mention headless or headed browsers or any tool's flags; each tool runs with its own defaults.
 - **Same browser conditions:** every setup asks for a headless local Chrome (Stagehand's facade only runs headed, so every workflow job gets the same virtual display), a fresh working directory per run, and the page state is reset before each run.
 - **Debuggable:** every result row keeps the agent's final message, and the workflow keeps every full transcript as an artifact for 90 days.
-- **Same machine type, no queueing:** in the workflow every setup runs in its own job on a fresh GitHub-hosted runner, all in parallel. Within a job the runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
+- **Same machine type, no queueing:** for the token study every setup runs in its own job on a fresh GitHub-hosted runner, all in parallel. Live-web suites run every setup in one job instead, because websites block by IP address and every runner has its own: in separate jobs one tool could get a clean address and another a blocked one (our first Online-Mind2Web pilot showed exactly that). Within a job the runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
 - **Exact versions:** every tool is installed before the first run, so install time never counts, and dist-tags like `latest` are resolved and recorded in the report.
 - **Everything is published:** code, prompts, checks and the raw JSONL of every run.
 
@@ -122,7 +122,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 
 | Input | Default | What it does |
 |---|---|---|
-| `suite` | `token-study` | task set: `token-study` or `online-mind2web` (needs the `HF_TOKEN` and `OPENAI_API_KEY` repository secrets; use `runs` 1) |
+| `suite` | `token-study` | task set: `token-study` or `online-mind2web` (needs the `HF_TOKEN` and `OPENAI_API_KEY` repository secrets; use `runs` 1 and `concurrency` 4) |
 | `webdriverio` | `10.0.0-alpha.155` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
 | `wdio-mcp` | `4.0.0-dev.56` | `@wdio/mcp` version |
 | `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
@@ -132,7 +132,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `runs` | `3` | runs per task and setup |
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
 | `seed` | `1` | seed for the run order |
-| `concurrency` | `1` | runs at the same time per setup; 2 halves the time of an `online-mind2web` run |
+| `concurrency` | `1` | runs at the same time per job; use 4 for `online-mind2web`, which runs every setup in one job |
 | `publish` | on | commit the results to this repository |
 
 npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       suite:
-        description: 'Task set: token-study (8 tasks, checked by code) or online-mind2web (50 live-web tasks judged by WebJudge; needs the HF_TOKEN and OPENAI_API_KEY secrets, use runs 1)'
+        description: 'Task set: token-study (8 tasks, checked by code) or online-mind2web (50 live-web tasks judged by WebJudge; needs the HF_TOKEN and OPENAI_API_KEY secrets, use runs 1 and concurrency 4)'
         type: choice
         options: [token-study, online-mind2web]
         default: token-study
@@ -46,7 +46,7 @@ on:
         description: Seed for the run order
         default: '1'
       concurrency:
-        description: Runs at the same time per setup (1 for the cleanest timings; 2 halves the time of a live-web run)
+        description: Runs at the same time per job (1 for the cleanest timings; online-mind2web runs every setup in one job, use 4)
         default: '1'
       publish:
         description: Commit the results to the repository
@@ -77,13 +77,15 @@ jobs:
       - id: plan
         env:
           SETUPS: ${{ inputs.setups }}
+          SUITE: ${{ inputs.suite }}
         run: |
-          setups=$(node src/plan.ts "$SETUPS")
+          setups=$(node src/plan.ts "$SETUPS" "$SUITE")
           echo "setups=$setups" >> "$GITHUB_OUTPUT"
           echo "result-id=$(date -u +%Y-%m-%d)-run-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
 
   bench:
-    name: ${{ matrix.setup }}
+    # live-web suites run every setup in this one job (see src/plan.ts)
+    name: ${{ inputs.suite == 'token-study' && matrix.setup || 'all setups' }}
     needs: plan
     runs-on: ubuntu-latest
     # GitHub's maximum: 50 live-web tasks take a few hours per setup
