@@ -27,6 +27,9 @@ on:
       agent-browser:
         description: 'agent-browser version'
         default: latest
+      playwright-cli:
+        description: '@playwright/cli version'
+        default: latest
       stagehand:
         description: 'browserbase/stagehand git ref (branch, tag or sha) to build its Claude Code MCP server from; latest = newest release tag'
         default: latest
@@ -114,6 +117,7 @@ jobs:
           PLAYWRIGHT_MCP_VERSION: ${{ inputs.playwright-mcp }}
           STAGEHAND_REF: ${{ inputs.stagehand }}
           AGENT_BROWSER_VERSION: ${{ inputs.agent-browser }}
+          PLAYWRIGHT_CLI_VERSION: ${{ inputs.playwright-cli }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SUITE: ${{ inputs.suite }}
           CONCURRENCY: ${{ inputs.concurrency }}
