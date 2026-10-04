@@ -119,6 +119,14 @@ const PLAYWRIGHT_MCP: ToolSpec = { pkg: '@playwright/mcp', env: 'PLAYWRIGHT_MCP_
 const agentBrowserSockets = (runId: string) => `/tmp/ab-${createHash('sha1').update(runId).digest('hex').slice(0, 10)}`
 
 /**
+ * Where `wdio session` keeps its sessions for one run. Without it, the
+ * runtime dir follows XDG_RUNTIME_DIR, which every run on a Linux runner
+ * shares, and the cleanup's `close --all` would close the sessions of runs
+ * still going on in parallel.
+ */
+const wdioSessionDir = (runId: string) => `/tmp/wd-${createHash('sha1').update(runId).digest('hex').slice(0, 10)}`
+
+/**
  * The run directory gets an `agent-browser` binary and the skill the way
  * `npx skills add vercel-labs/agent-browser` installs it: a stub that points
  * the agent to `agent-browser skills get core` for the version's own guide.
@@ -205,15 +213,16 @@ export const SETUPS: Setup[] = [
                 // only its own skill: Claude Code's bundled skills (code-review,
                 // deep-research, …) would otherwise be listed on every turn
                 skills: ['wdio-session'],
-                env: { ...process.env, PATH: `${binDir}:${process.env.PATH}`, WDIO_SESSION: runId }
+                env: { ...process.env, PATH: `${binDir}:${process.env.PATH}`, WDIO_SESSION: runId, WDIO_SESSION_DIR: wdioSessionDir(runId) }
             }
         },
         permit: (toolName, input) => toolName === 'Bash' && typeof input.command === 'string' && isWdioSessionCommand(input.command),
         permitHint: 'Only `wdio session …` commands are available in this benchmark setup.',
-        // the agent may have named its own sessions; the run's TMPDIR (in
-        // `env`) holds only the ones it opened
-        cleanup: async ({ binPath }, cwd, _runId, env) => {
-            await run(process.execPath, [binPath, 'session', 'close', '--all'], { cwd, env }).catch(() => {})
+        // the agent may have named its own sessions; the run's session dir
+        // holds only the ones it opened
+        cleanup: async ({ binPath }, cwd, runId, env) => {
+            await run(process.execPath, [binPath, 'session', 'close', '--all'], { cwd, env: { ...env, WDIO_SESSION_DIR: wdioSessionDir(runId) } }).catch(() => {})
+            await fs.rm(wdioSessionDir(runId), { recursive: true, force: true })
         }
     },
     {
