@@ -102,7 +102,7 @@ Limitations to keep in mind:
 
 ## Keeping it fair
 
-- **Same model and harness for every setup:** `claude-sonnet-5` with thinking disabled, through the Claude Agent SDK, as in Stagehand's study.
+- **Same model and harness for every setup:** `claude-sonnet-5` with thinking disabled, through the Claude Agent SDK, as in Stagehand's study. A run can pick another model (`--model`, the workflow's `model` input): Claude models go to Anthropic, others (`deepseek-flash-4-1`, DeepSeek V4.1 Flash) to [OpenRouter's Anthropic-compatible API](https://openrouter.ai/docs/guides/guides/claude-code-integration), with every model slot of Claude Code on that model so no call reaches Claude. The harness, prompts and setups stay the same. Their cost is computed from the tokens and OpenRouter's prices at the start of the run, which the run's meta keeps; the SDK would price them as Claude tokens ([`src/models.ts`](src/models.ts)).
 - **Same prompts:** one system prompt for everyone. A setup only adds one sentence on how to reach the browser ([`src/setups.ts`](src/setups.ts)).
 - **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. The command-line setups (`wdio-session`, `agent-browser`) get `Skill`, `Read` and `Bash` for their own commands only ([`src/permit.ts`](src/permit.ts): every part of a command must be a call of the tool, an `echo`, `true`, a heredoc or `echo` feeding the tool, or a read-only filter on its output; command substitution only of the tool's own commands; no redirects outside the run directory). agent-browser's `install`, `upgrade`, `plugin`, `chat` (which runs a model of its own) and `dashboard` are denied. Every other tool call is denied.
 - **No hints in the prompt:** the prompts don't mention headless or headed browsers or any tool's flags; each tool runs with its own defaults.
@@ -128,7 +128,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
 | `agent-browser` | `latest` | `agent-browser` version |
 | `stagehand` | `latest` | git ref of `browserbase/stagehand` to build (branch, tag or sha); `latest` is the newest `@browserbasehq/stagehand@x.y.z` release tag |
-| `model` | `claude-sonnet-5` | model for every agent |
+| `model` | `claude-sonnet-5` | model for every agent: `claude-sonnet-5`, or `deepseek-flash-4-1` through OpenRouter (needs the `OPENROUTER_API_KEY` repository secret) |
 | `runs` | `3` | runs per task and setup |
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
 | `seed` | `1` | seed for the run order |

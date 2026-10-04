@@ -31,7 +31,9 @@ on:
         description: 'browserbase/stagehand git ref (branch, tag or sha) to build its Claude Code MCP server from; latest = newest release tag'
         default: latest
       model:
-        description: Claude model for every agent
+        description: 'Model for every agent: Claude through Anthropic, others through OpenRouter (needs the OPENROUTER_API_KEY secret)'
+        type: choice
+        options: [claude-sonnet-5, deepseek-flash-4-1]
         default: claude-sonnet-5
       runs:
         description: Runs per task and setup
@@ -109,6 +111,7 @@ jobs:
       - name: Run benchmark
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           WDIO_VERSION: ${{ inputs.webdriverio }}
           WDIO_MCP_VERSION: ${{ inputs.wdio-mcp }}
           PLAYWRIGHT_MCP_VERSION: ${{ inputs.playwright-mcp }}
