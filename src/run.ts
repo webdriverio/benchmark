@@ -24,6 +24,7 @@ import { SUITES, loadTasks, parseAnswer, type SuiteId } from './tasks.ts'
 import { SETUPS, type Setup } from './setups.ts'
 import { installGitTool, installTool, type InstalledTool } from './tools.ts'
 import { captureScreenshot } from './screenshots.ts'
+import { costOf, modelEnv, openRouterPricing, resolveModel } from './models.ts'
 
 const exec = promisify(execFile)
 const ROOT = path.resolve(import.meta.dirname, '..')
@@ -53,6 +54,11 @@ const { values: args } = parseArgs({
         'dry-run': { type: 'boolean', default: false }
     }
 })
+
+// an unknown model, or a provider without its key, fails before any tool is installed
+const model = resolveModel(args.model)
+const providerEnv = args['dry-run'] ? {} : modelEnv(model)
+const pricing = model.provider === 'openrouter' && !args['dry-run'] ? await openRouterPricing(model) : undefined
 
 function pick<T extends { id: string }> (all: T[], ids: string): T[] {
     if (ids.trim() === 'all' || !ids.trim()) {
@@ -168,6 +174,7 @@ const meta = {
     startedAt: startedAt.toISOString(),
     finishedAt: undefined as string | undefined,
     model: args.model,
+    ...(model.provider !== 'anthropic' && { provider: { name: model.provider, model: model.apiModel, pricingUsdPerToken: pricing } }),
     runsPerTask: Number(args.runs),
     seed: Number(args.seed),
     maxTurns: Number(args['max-turns']),
@@ -233,11 +240,11 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
         return {}
     }
     try {
-        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId, { screenshots: args.screenshots }), tmp)
+        const setupOptions = withTmpDir(await setup.options(tool, cwd, runId, { screenshots: args.screenshots }), tmp, providerEnv)
         const stream = query({
             prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
             options: {
-                model: args.model,
+                model: model.apiModel,
                 thinking: { type: 'disabled' },
                 systemPrompt: [SYSTEM_PROMPT, setup.note, instructions.get(setup.id)].filter(Boolean).join('\n\n'),
                 cwd,
@@ -324,7 +331,8 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
         turns: result?.num_turns,
         toolCalls,
         tokens: { ...tokens, total: tokens.input + tokens.output + tokens.cacheRead + tokens.cacheCreation },
-        costUsd: result?.total_cost_usd
+        // the SDK prices tokens at Claude's rates
+        costUsd: pricing ? costOf(tokens, pricing) : result?.total_cost_usd
     })
     await setup.cleanup?.(tool, cwd, runId, { ...process.env, TMPDIR: tmp })
     await keepLogs(setup, cwd, path.join(screenDir, 'logs'))
@@ -360,13 +368,14 @@ console.log(`\nResults in ${path.relative(ROOT, outDir)}${judgeHint}\nPublish: n
  * WEBDRIVER_CACHE_DIR says otherwise, and a download in every run would be
  * counted as the tool's time.
  */
-function withTmpDir<T extends { env?: Record<string, string | undefined>, mcpServers?: Record<string, unknown> }> (options: T, tmp: string): T {
+function withTmpDir<T extends { env?: Record<string, string | undefined>, mcpServers?: Record<string, unknown> }> (options: T, tmp: string, agentEnv: Record<string, string> = {}): T {
     const vars = { TMPDIR: tmp, WEBDRIVER_CACHE_DIR: process.env.WEBDRIVER_CACHE_DIR || os.tmpdir() }
     const mcpServers = Object.fromEntries(Object.entries(options.mcpServers ?? {}).map(([name, server]) => {
         const stdio = server as { type?: string, env?: Record<string, string> }
         return [name, stdio.type === 'stdio' || stdio.type === undefined ? { ...stdio, env: { ...(stdio.env ?? {}), ...vars } } : server]
     }))
-    return { ...options, env: { ...(options.env ?? process.env), ...vars }, ...(options.mcpServers && { mcpServers }) }
+    // the model's provider settings reach the agent only, not the MCP servers
+    return { ...options, env: { ...(options.env ?? process.env), ...vars, ...agentEnv }, ...(options.mcpServers && { mcpServers }) }
 }
 
 /**

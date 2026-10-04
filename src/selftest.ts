@@ -9,6 +9,7 @@ import { startSites, resetSite, MAIN_ORIGIN, FRAME_ORIGIN } from './sites.ts'
 import { TASKS, parseAnswer } from './tasks.ts'
 import { isAgentBrowserCommand, isPlaywrightCliCommand, isWdioSessionCommand } from './permit.ts'
 import { sample, type Mind2WebTask } from './mind2web.ts'
+import { costOf, modelEnv, resolveModel } from './models.ts'
 
 const sites = await startSites()
 
@@ -174,6 +175,43 @@ for (const [name, ok] of [
 ] as const) {
     failed += ok ? 0 : 1
     console.log(`${ok ? '✓' : '✗'} ${name}`)
+}
+
+// models: Claude goes to Anthropic, the others to OpenRouter with every model slot on the chosen model
+{
+    const claude = resolveModel('claude-sonnet-5')
+    const deepseek = resolveModel('deepseek-flash-4-1')
+    const key = process.env.OPENROUTER_API_KEY
+    process.env.OPENROUTER_API_KEY = 'test-key'
+    const env = modelEnv(deepseek)
+    delete process.env.OPENROUTER_API_KEY
+    let missingKey = false
+    try {
+        modelEnv(deepseek)
+    } catch {
+        missingKey = true
+    }
+    if (key) {
+        process.env.OPENROUTER_API_KEY = key
+    }
+    let unknown = false
+    try {
+        resolveModel('gpt-5')
+    } catch {
+        unknown = true
+    }
+    const checks: [string, boolean][] = [
+        ['claude models go to Anthropic unchanged', claude.provider === 'anthropic' && claude.apiModel === 'claude-sonnet-5' && Object.keys(modelEnv(claude)).length === 0],
+        ['deepseek-flash-4-1 is DeepSeek V4.1 Flash on OpenRouter', deepseek.provider === 'openrouter' && deepseek.apiModel === 'deepseek/deepseek-v4.1-flash'],
+        ['OpenRouter env points every model slot at the chosen model', env.ANTHROPIC_BASE_URL === 'https://openrouter.ai/api' && env.ANTHROPIC_AUTH_TOKEN === 'test-key' && env.ANTHROPIC_API_KEY === '' && env.ANTHROPIC_DEFAULT_HAIKU_MODEL === deepseek.apiModel && env.CLAUDE_CODE_SUBAGENT_MODEL === deepseek.apiModel],
+        ['an OpenRouter model without OPENROUTER_API_KEY fails', missingKey],
+        ['an unknown model fails', unknown],
+        ['cost is tokens times price', Math.abs(costOf({ input: 10, output: 20, cacheRead: 30, cacheCreation: 40 }, { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 }) - 300) < 1e-9]
+    ]
+    for (const [name, ok] of checks) {
+        failed += ok ? 0 : 1
+        console.log(`${ok ? '✓' : '✗'} ${name}`)
+    }
 }
 
 await sites.close()
