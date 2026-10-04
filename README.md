@@ -125,8 +125,8 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | Input | Default | What it does |
 |---|---|---|
 | `suite` | `token-study` | task set: `token-study` or `online-mind2web` (needs the `HF_TOKEN` and `OPENAI_API_KEY` repository secrets; use `runs` 1 and `concurrency` 4) |
-| `webdriverio` | `10.0.0-alpha.163` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
-| `wdio-mcp` | `4.0.0-dev.61` | `@wdio/mcp` version |
+| `webdriverio` | `10.0.0-alpha.175` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
+| `wdio-mcp` | `4.0.0-dev.64` | `@wdio/mcp` version |
 | `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
 | `agent-browser` | `latest` | `agent-browser` version |
 | `playwright-cli` | `latest` | `@playwright/cli` version |
