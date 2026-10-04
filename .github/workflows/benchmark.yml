@@ -186,14 +186,35 @@ jobs:
         if: ${{ inputs.publish }}
         env:
           RESULT_ID: ${{ needs.plan.outputs.result-id }}
+        # README.md and results/README.md are generated from every published
+        # run, so anything pushed to main while this run was going (another
+        # run's results, a README edit) conflicts with a plain rebase. Instead,
+        # start each attempt from the current main, put this run's raw results
+        # back and regenerate the derived files there, then push.
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add results README.md
-          git commit -m "results: $RESULT_ID" -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          for _ in 1 2 3; do
-            git pull --rebase origin main && git push origin HEAD:main && exit 0
-            sleep 5
+          saved="$RUNNER_TEMP/result-$RESULT_ID"
+          cp -R "results/$RESULT_ID" "$saved"
+          lock=$(sha256sum package-lock.json)
+          for attempt in 1 2 3 4 5; do
+            git fetch --depth=1 origin main
+            git reset --hard FETCH_HEAD
+            if [ "$(sha256sum package-lock.json)" != "$lock" ]; then
+              npm ci
+              lock=$(sha256sum package-lock.json)
+            fi
+            rm -rf "results/$RESULT_ID"
+            cp -R "$saved" "results/$RESULT_ID"
+            node src/publish.ts "results/$RESULT_ID"
+            git add results README.md
+            if git diff --cached --quiet; then
+              echo "results/$RESULT_ID is already published on main"
+              exit 0
+            fi
+            git commit -m "results: $RESULT_ID" -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            git push origin HEAD:main && exit 0
+            sleep $((attempt * 10))
           done
           exit 1
       - name: Wait for benchmark.webdriver.io
