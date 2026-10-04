@@ -33,6 +33,21 @@ _Medians per run, except success. Tokens include cache reads and writes._
 
 Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.56` · wdio-session: `@wdio/cli@10.0.0-alpha.155` · agent-browser: `agent-browser@0.38.2`
 
+**Online-Mind2Web.** Latest run: [2026-10-04-run-37166916465](results/2026-10-04-run-37166916465/report.md) on 2026-10-04, `claude-sonnet-5`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37166916465).
+
+| Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
+|---|--:|--:|--:|--:|--:|
+| playwright-mcp | 262k | $0.139 | 30% (3/10) | 48 s | 15.5 |
+| playwright-mcp-tuned | 298k | $0.125 | 30% (3/10) | 62 s | 17.5 |
+| stagehand | 471k | $0.212 | 40% (4/10) | 54 s | 19.5 |
+| wdio-mcp | 349k | $0.146 | 20% (2/10) | 82 s | 27.5 |
+| wdio-session | 534k | $0.213 | 40% (4/10) | 113 s | 27 |
+| agent-browser | 1280k | $0.409 | 80% (8/10) | 111 s | 32.5 |
+
+_Medians per run, except success. Tokens include cache reads and writes._
+
+Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.56` · wdio-session: `@wdio/cli@10.0.0-alpha.155` · agent-browser: `agent-browser@0.38.2`
+
 All runs: [results](results/README.md).
 <!-- results:end -->
 
