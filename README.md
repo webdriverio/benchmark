@@ -18,16 +18,22 @@ The first three are the setups from Stagehand's post. We run them ourselves inst
 ## Latest results
 
 <!-- results:start -->
-Latest run: [2026-10-03-run-37160827715](results/2026-10-03-run-37160827715/report.md) on 2026-10-03, `claude-sonnet-5`, 3 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37160827715). All runs: [results](results/README.md).
+**Token study.** Latest run: [2026-10-04-run-37164609078](results/2026-10-04-run-37164609078/report.md) on 2026-10-04, `claude-sonnet-5`, 3 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37164609078).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 90k | $0.052 | 100% (13/13) | 25 s | 8 |
-| stagehand | 41k | $0.032 | 100% (4/4) | 19 s | 7 |
+| playwright-mcp | 88k | $0.047 | 100% (24/24) | 21 s | 8 |
+| playwright-mcp-tuned | 88k | $0.052 | 100% (24/24) | 22 s | 7.5 |
+| stagehand | 45k | $0.033 | 96% (23/24) | 14 s | 6 |
+| wdio-mcp | 67k | $0.033 | 100% (24/24) | 15 s | 6 |
+| wdio-session | 77k | $0.039 | 100% (24/24) | 18 s | 6.5 |
+| agent-browser | 176k | $0.076 | 100% (24/24) | 24 s | 11.5 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
-Versions: playwright-mcp: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230`
+Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.56` · wdio-session: `@wdio/cli@10.0.0-alpha.155` · agent-browser: `agent-browser@0.38.2`
+
+All runs: [results](results/README.md).
 <!-- results:end -->
 
 ## What is measured
