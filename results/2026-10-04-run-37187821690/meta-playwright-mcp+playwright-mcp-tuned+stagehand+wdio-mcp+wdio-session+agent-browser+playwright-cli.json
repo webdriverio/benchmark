@@ -1,0 +1,123 @@
+{
+  "suite": "online-mind2web",
+  "screenshots": true,
+  "startedAt": "2026-10-04T11:50:38.769Z",
+  "finishedAt": "2026-10-04T16:49:30.313Z",
+  "model": "deepseek-flash-4-1",
+  "provider": {
+    "name": "openrouter",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "pricingUsdPerToken": {
+      "input": 3e-9,
+      "output": 0.0000024,
+      "cacheRead": 3e-9,
+      "cacheWrite": 3e-9
+    }
+  },
+  "runsPerTask": 1,
+  "seed": 1,
+  "maxTurns": 80,
+  "timeoutMin": 10,
+  "tasks": [
+    "om2w-180ed2ec",
+    "om2w-3dca7cbe",
+    "om2w-29b7372d",
+    "om2w-75a1b5dc",
+    "om2w-a6f0434c",
+    "om2w-9829f308",
+    "om2w-f389398d",
+    "om2w-d71be72a",
+    "om2w-47186fac",
+    "om2w-82eb3bfe",
+    "om2w-4c572a62",
+    "om2w-b6d10e9b",
+    "om2w-f00e7acc",
+    "om2w-9d46ccb9",
+    "om2w-56f8890a",
+    "om2w-64b76158",
+    "om2w-ba2a469a",
+    "om2w-c1d6ea6f",
+    "om2w-11abb668",
+    "om2w-fa9adb81",
+    "om2w-4c186c6e",
+    "om2w-070c907d",
+    "om2w-690d7b4a",
+    "om2w-84f806c7",
+    "om2w-d1807551",
+    "om2w-59b7b990",
+    "om2w-b99c0296",
+    "om2w-323bd85e",
+    "om2w-c94551d2",
+    "om2w-fb7b4f78",
+    "om2w-0a0fa834",
+    "om2w-60cbbbd5",
+    "om2w-515f2e58",
+    "om2w-7072d094",
+    "om2w-d392e154",
+    "om2w-65c4030f",
+    "om2w-864244b6",
+    "om2w-27fa3ac2",
+    "om2w-9ed38272",
+    "om2w-6ebde509",
+    "om2w-ba01ea55",
+    "om2w-fc53ddd3",
+    "om2w-5dec0e66",
+    "om2w-a5c87cc1",
+    "om2w-442a450e",
+    "om2w-7680a920",
+    "om2w-c39d6c24",
+    "om2w-987bad7c",
+    "om2w-824eb7bb",
+    "om2w-1b867afe"
+  ],
+  "setups": {
+    "playwright-mcp": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "playwright-mcp-tuned": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "stagehand": {
+      "pkg": "browserbase/stagehand",
+      "version": "4.1.0+cd7b230",
+      "url": "https://github.com/browserbase/stagehand/tree/cd7b230778cf92269e4cb90e80d97f5113781c51"
+    },
+    "wdio-mcp": {
+      "pkg": "@wdio/mcp",
+      "version": "4.0.0-dev.61",
+      "url": "https://www.npmjs.com/package/@wdio/mcp/v/4.0.0-dev.61"
+    },
+    "wdio-session": {
+      "pkg": "@wdio/cli",
+      "version": "10.0.0-alpha.163",
+      "url": "https://www.npmjs.com/package/@wdio/cli/v/10.0.0-alpha.163"
+    },
+    "agent-browser": {
+      "pkg": "agent-browser",
+      "version": "0.38.2",
+      "url": "https://www.npmjs.com/package/agent-browser/v/0.38.2"
+    },
+    "playwright-cli": {
+      "pkg": "@playwright/cli",
+      "version": "0.1.22",
+      "url": "https://www.npmjs.com/package/@playwright/cli/v/0.1.22"
+    }
+  },
+  "workflowRun": {
+    "url": "https://github.com/webdriverio/benchmark/actions/runs/37187821690",
+    "id": "37187821690",
+    "attempt": "1"
+  },
+  "commit": "5f0e27860e8c5191e2bae7675c78f016153a211b",
+  "environment": {
+    "os": "Linux 6.17.0-1022-azure (x64)",
+    "cpus": "4× AMD EPYC 7763 64-Core Processor",
+    "node": "v24.21.0",
+    "chrome": "Google Chrome 154.0.8037.57",
+    "agentSdk": "0.3.288"
+  }
+}
