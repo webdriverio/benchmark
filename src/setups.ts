@@ -51,6 +51,12 @@ export interface Setup {
     permitHint?: string
     /** clean up anything the run left behind (browsers, daemons) */
     cleanup?: (tool: InstalledTool, cwd: string, runId: string, env: NodeJS.ProcessEnv) => Promise<void>
+    /**
+     * the tool's own log files in the run's working directory, relative to
+     * it, kept with the transcript: they explain what a transcript can't
+     * (a session that went away, a slow page)
+     */
+    logs?: (cwd: string) => Promise<string[]>
 }
 
 export interface RunOptions {
@@ -223,6 +229,11 @@ export const SETUPS: Setup[] = [
         cleanup: async ({ binPath }, cwd, runId, env) => {
             await run(process.execPath, [binPath, 'session', 'close', '--all'], { cwd, env: { ...env, WDIO_SESSION_DIR: wdioSessionDir(runId) } }).catch(() => {})
             await fs.rm(wdioSessionDir(runId), { recursive: true, force: true })
+        },
+        // one artifacts directory per session the agent opened
+        logs: async (cwd) => {
+            const sessions = await fs.readdir(path.join(cwd, '.wdio', 'session'), { withFileTypes: true }).catch(() => [])
+            return sessions.filter((entry) => entry.isDirectory()).map((entry) => path.join('.wdio', 'session', entry.name, 'daemon.log'))
         }
     },
     {

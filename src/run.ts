@@ -327,6 +327,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
         costUsd: result?.total_cost_usd
     })
     await setup.cleanup?.(tool, cwd, runId, { ...process.env, TMPDIR: tmp })
+    await keepLogs(setup, cwd, path.join(screenDir, 'logs'))
     const leftovers = await killLeftovers(tmp)
     if (leftovers) {
         row.leftoverProcesses = leftovers
@@ -374,6 +375,41 @@ function withTmpDir<T extends { env?: Record<string, string | undefined>, mcpSer
  * its command line belongs to this run; drivers whose parent is gone belong
  * to no run. Returns how many processes had to be killed.
  */
+/** the end of a log is what explains how a run ended */
+const MAX_LOG_BYTES = 2 * 1024 * 1024
+
+/**
+ * Copy the setup's log files out of the run's working directory before it is
+ * removed, the last MAX_LOG_BYTES of each. Only regular files inside `cwd`;
+ * a missing log is skipped.
+ */
+async function keepLogs (setup: Setup, cwd: string, dest: string) {
+    for (const file of await setup.logs?.(cwd).catch(() => []) ?? []) {
+        const source = path.resolve(cwd, file)
+        if (!source.startsWith(path.resolve(cwd) + path.sep)) {
+            continue
+        }
+        try {
+            const stat = await fs.lstat(source)
+            if (!stat.isFile()) {
+                continue
+            }
+            const handle = await fs.open(source, 'r')
+            try {
+                const length = Math.min(stat.size, MAX_LOG_BYTES)
+                const { buffer } = await handle.read(Buffer.alloc(length), 0, length, stat.size - length)
+                const target = path.join(dest, path.relative(cwd, source))
+                await fs.mkdir(path.dirname(target), { recursive: true })
+                await fs.writeFile(target, buffer)
+            } finally {
+                await handle.close()
+            }
+        } catch {
+            // a log the tool didn't write
+        }
+    }
+}
+
 async function killLeftovers (tmp: string): Promise<number> {
     const { stdout } = await exec('ps', ['-axo', 'pid=,ppid=,command=']).catch(() => ({ stdout: '' }))
     const pids = stdout.split('\n').flatMap((line) => {
