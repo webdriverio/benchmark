@@ -17,10 +17,10 @@ on:
         default: token-study
       webdriverio:
         description: '@wdio/cli version for wdio session (v10 and up; latest is still v9, which has no wdio session)'
-        default: 10.0.0-alpha.155
+        default: 10.0.0-alpha.162
       wdio-mcp:
         description: '@wdio/mcp version'
-        default: 4.0.0-dev.56
+        default: 4.0.0-dev.57
       playwright-mcp:
         description: '@playwright/mcp version'
         default: latest
