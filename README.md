@@ -34,21 +34,21 @@ _Medians per run, except success. Tokens include cache reads and writes._
 
 Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.56` · wdio-session: `@wdio/cli@10.0.0-alpha.155` · agent-browser: `agent-browser@0.38.2`
 
-**Online-Mind2Web.** Latest run: [2026-10-04-run-37187821690](results/2026-10-04-run-37187821690/report.md) on 2026-10-04, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37187821690).
+**Online-Mind2Web.** Latest run: [2026-10-04-run-37231128914](results/2026-10-04-run-37231128914/report.md) on 2026-10-04, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37231128914).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 494k | $0.014 | 48% (24/50) | 118 s | 27.5 |
-| playwright-mcp-tuned | 620k | $0.014 | 50% (25/50) | 107 s | 30 |
-| stagehand | 380k | $0.015 | 60% (30/50) | 110 s | 24.5 |
-| wdio-mcp | 320k | $0.013 | 58% (29/50) | 121 s | 29.5 |
-| wdio-session | 222k | $0.011 | 52% (26/50) | 136 s | 30 |
-| agent-browser | 638k | $0.018 | 50% (25/50) | 142 s | 35.5 |
-| playwright-cli | 418k | $0.013 | 50% (25/50) | 107 s | 29 |
+| playwright-mcp | 620k | $0.015 | 60% (30/50) | 116 s | 27.5 |
+| playwright-mcp-tuned | 599k | $0.015 | 52% (26/50) | 95 s | 27 |
+| stagehand | 344k | $0.013 | 56% (28/50) | 96 s | 22 |
+| wdio-mcp | 313k | $0.011 | 56% (28/50) | 127 s | 29.5 |
+| wdio-session | 332k | $0.012 | 64% (32/50) | 132 s | 31 |
+| agent-browser | 735k | $0.018 | 40% (20/50) | 145 s | 38 |
+| playwright-cli | 569k | $0.014 | 54% (27/50) | 149 s | 32.5 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
-Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.61` · wdio-session: `@wdio/cli@10.0.0-alpha.163` · agent-browser: `agent-browser@0.38.2` · playwright-cli: `@playwright/cli@0.1.22`
+Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.64` · wdio-session: `@wdio/cli@10.0.0-alpha.175` · agent-browser: `agent-browser@0.38.2` · playwright-cli: `@playwright/cli@0.1.22`
 
 All runs: [results](results/README.md).
 <!-- results:end -->
