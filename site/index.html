@@ -11,7 +11,7 @@
 <meta property="og:site_name" content="WebdriverIO">
 <meta property="og:url" content="https://benchmark.webdriver.io/">
 <meta property="og:title" content="Browser Agent Benchmark">
-<meta property="og:description" content="How often do AI agents get a browser task right, and what does it cost? WebdriverIO, Playwright, Stagehand and agent-browser on 50 live-web tasks from Online-Mind2Web.">
+<meta property="og:description" content="How often do AI agents get a browser task right, and what does it cost? WebdriverIO, Playwright, Stagehand and agent-browser on 100 live-web tasks from Online-Mind2Web.">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Browser Agent Benchmark">
 <meta name="twitter:description" content="Success rate, cost, tokens and time of browser tools for AI agents on live-web tasks. Open data, every run published.">
@@ -110,7 +110,7 @@
       <div class="method-grid">
         <article class="card">
           <h3>Tasks we didn't write</h3>
-          <p>The tasks are a fixed random sample of 50 tasks from <a href="https://github.com/OSU-NLP-Group/Online-Mind2Web">Online-Mind2Web</a> (COLM 2025): 300 tasks on 136 live websites, written by researchers at Ohio State. The sample keeps the dataset's mix of easy, medium and hard tasks and uses a fixed seed, so anyone can recompute it. No tool vendor, including us, picked these tasks.</p>
+          <p>The tasks are a fixed random sample of 100 tasks from <a href="https://github.com/OSU-NLP-Group/Online-Mind2Web">Online-Mind2Web</a> (COLM 2025): 300 tasks on 136 live websites, written by researchers at Ohio State. The sample keeps the dataset's mix of easy, medium and hard tasks and uses a fixed seed, so anyone can recompute it. No tool vendor, including us, picked these tasks.</p>
         </article>
         <article class="card">
           <h3>An independent judge</h3>
@@ -131,7 +131,7 @@
           <h3>Limitations</h3>
           <ul class="tight">
             <li>Live websites change, block bots and show CAPTCHAs, so runs are not exactly repeatable. A blocked run counts as a failure for every tool it hits.</li>
-            <li>50 tasks and one run per task give intervals about ±13 points wide. Close results are ties.</li>
+            <li>100 tasks and one run per task give intervals about ±10 points wide. Close results are ties.</li>
             <li>WebJudge disagrees with human reviewers on about one run in seven.</li>
             <li>A tool that does several steps in one call leaves fewer screenshots for the judge to check.</li>
             <li>This benchmark is maintained by the WebdriverIO project, which builds two of the tools. That is why the code, prompts, raw data and judgments are all public. If a setup looks wrong, <a href="https://github.com/webdriverio/benchmark/issues">tell us</a>.</li>

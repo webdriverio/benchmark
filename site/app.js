@@ -93,8 +93,14 @@ const swatch = (id) => `<i class="swatch" style="background:${colorOf(id)}" aria
 
 const state = { suite: '', model: '', axis: 'cost', sort: { key: 'rank', dir: 1 } }
 
-/** a version that ran every task of its suite, not a pilot on a few of them */
-const isComplete = (g) => Object.keys(g.perTask).length >= (data.tasks[g.suite] ?? []).length
+/**
+ * A version that ran as many tasks as any version did with this model, not a
+ * pilot on a few of them. Per model, so a larger sample that one model has
+ * already run doesn't turn the other model's results into pilots.
+ */
+const isComplete = (g) => Object.keys(g.perTask).length >= Math.max(...data.groups
+    .filter((o) => o.suite === g.suite && o.model === g.model)
+    .map((o) => Object.keys(o.perTask).length))
 
 /** the newest fully tested version of each tool (or its newest, if none is), ranked by success, then cost */
 function latestGroups () {
