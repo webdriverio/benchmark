@@ -1,7 +1,7 @@
 name: Benchmark
 
-# Runs every task for every setup, one setup per job in parallel, then
-# publishes results/<date>-run-<id>/ (raw data, meta.json, report.md),
+# Runs every Online-Mind2Web task for every setup in one job, has WebJudge
+# decide success, then publishes results/<date>-run-<id>/ (raw data, meta.json, report.md),
 # the results index and the README's "Latest results" section.
 #
 # Versions accept anything npm does: an exact version, a dist-tag
@@ -10,11 +10,6 @@ name: Benchmark
 on:
   workflow_dispatch:
     inputs:
-      suite:
-        description: 'Task set: token-study (8 tasks, checked by code) or online-mind2web (50 live-web tasks judged by WebJudge; needs the HF_TOKEN and OPENAI_API_KEY secrets, use runs 1 and concurrency 4)'
-        type: choice
-        options: [token-study, online-mind2web]
-        default: token-study
       webdriverio:
         description: '@wdio/cli version for wdio session (v10 and up; latest is still v9, which has no wdio session)'
         default: 10.0.0-alpha.175
@@ -40,7 +35,7 @@ on:
         default: claude-sonnet-5
       runs:
         description: Runs per task and setup
-        default: '3'
+        default: '1'
       setups:
         description: Comma-separated setup ids, or "all"
         default: all
@@ -51,8 +46,8 @@ on:
         description: Seed for the run order
         default: '1'
       concurrency:
-        description: Runs at the same time per job (1 for the cleanest timings; online-mind2web runs every setup in one job, use 4)
-        default: '1'
+        description: Runs at the same time (every setup runs in one job)
+        default: '4'
       publish:
         description: Commit the results to the repository
         type: boolean
@@ -82,23 +77,18 @@ jobs:
       - id: plan
         env:
           SETUPS: ${{ inputs.setups }}
-          SUITE: ${{ inputs.suite }}
         run: |
-          setups=$(node src/plan.ts "$SETUPS" "$SUITE")
+          setups=$(node src/plan.ts "$SETUPS")
           echo "setups=$setups" >> "$GITHUB_OUTPUT"
           echo "result-id=$(date -u +%Y-%m-%d)-run-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
 
   bench:
-    # live-web suites run every setup in this one job (see src/plan.ts)
-    name: ${{ inputs.suite == 'token-study' && matrix.setup || 'all setups' }}
+    # every setup in this one job, so all share one IP address (see src/plan.ts)
+    name: Run and judge
     needs: plan
     runs-on: ubuntu-latest
-    # GitHub's maximum: 50 live-web tasks take a few hours per setup
+    # GitHub's maximum: 50 tasks × 7 setups take four to five hours
     timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        setup: ${{ fromJSON(needs.plan.outputs.setups) }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -106,9 +96,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run selftest
       - uses: actions/setup-python@v5
-        if: ${{ inputs.suite == 'online-mind2web' }}
         with:
           python-version: '3.11'
       - name: Run benchmark
@@ -122,9 +110,8 @@ jobs:
           AGENT_BROWSER_VERSION: ${{ inputs.agent-browser }}
           PLAYWRIGHT_CLI_VERSION: ${{ inputs.playwright-cli }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          SUITE: ${{ inputs.suite }}
           CONCURRENCY: ${{ inputs.concurrency }}
-          SETUP: ${{ matrix.setup }}
+          SETUP: ${{ needs.plan.outputs.setups }}
           TASKS: ${{ inputs.tasks }}
           RUNS: ${{ inputs.runs }}
           MODEL: ${{ inputs.model }}
@@ -132,11 +119,11 @@ jobs:
           OUT_DIR: results/${{ needs.plan.outputs.result-id }}
         # a virtual display for every job: Stagehand's facade always launches a
         # headed browser, and the other setups should run under the same conditions
-        run: xvfb-run --auto-servernum node src/run.ts --suite "$SUITE" --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --concurrency "$CONCURRENCY" --out-dir "$OUT_DIR"
+        run: xvfb-run --auto-servernum node src/run.ts --setups "$SETUP" --tasks "$TASKS" --runs "$RUNS" --model "$MODEL" --seed "$SEED" --concurrency "$CONCURRENCY" --out-dir "$OUT_DIR"
       - name: Judge with WebJudge
         # a judge from another model family than the agents; runs it cannot
         # judge stay pending and are left out of the results, not failed
-        if: ${{ always() && inputs.suite == 'online-mind2web' }}
+        if: ${{ always() }}
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -145,13 +132,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: results-${{ matrix.setup }}
+          name: results
           path: results/${{ needs.plan.outputs.result-id }}
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: transcripts-${{ matrix.setup }}
+          name: transcripts
           path: transcripts/${{ needs.plan.outputs.result-id }}
           if-no-files-found: ignore
           retention-days: 90
@@ -173,8 +160,7 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@v5
         with:
-          pattern: results-*
-          merge-multiple: true
+          name: results
           path: results/${{ needs.plan.outputs.result-id }}
       - name: Write report
         env:

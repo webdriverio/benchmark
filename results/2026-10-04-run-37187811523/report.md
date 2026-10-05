@@ -303,4 +303,4 @@ _Each cell: passed/runs · median tokens · median time._
 | `agent-browser` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 9V45 96-Core Processor | v24.21.0 | Google Chrome 154.0.8037.57 |
 | `playwright-cli` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 9V45 96-Core Processor | v24.21.0 | Google Chrome 154.0.8037.57 |
 
-Each setup ran in its own job on a fresh runner, in parallel with the others.
+Every setup ran in the same job, interleaved in one shuffled order.
