@@ -34,17 +34,17 @@ _Medians per run, except success. Tokens include cache reads and writes._
 
 Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.56` · wdio-session: `@wdio/cli@10.0.0-alpha.155` · agent-browser: `agent-browser@0.38.2`
 
-**Online-Mind2Web.** Latest run: [2026-10-04-run-37231128914](results/2026-10-04-run-37231128914/report.md) on 2026-10-04, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37231128914).
+**Online-Mind2Web.** Latest run: [2026-10-05-run-37252714051](results/2026-10-05-run-37252714051/report.md) on 2026-10-05, `claude-sonnet-5`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37252714051).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 620k | $0.015 | 60% (30/50) | 116 s | 27.5 |
-| playwright-mcp-tuned | 599k | $0.015 | 52% (26/50) | 95 s | 27 |
-| stagehand | 344k | $0.013 | 56% (28/50) | 96 s | 22 |
-| wdio-mcp | 313k | $0.011 | 56% (28/50) | 127 s | 29.5 |
-| wdio-session | 332k | $0.012 | 64% (32/50) | 132 s | 31 |
-| agent-browser | 735k | $0.018 | 40% (20/50) | 145 s | 38 |
-| playwright-cli | 569k | $0.014 | 54% (27/50) | 149 s | 32.5 |
+| playwright-mcp | 341k | $0.135 | 42% (21/50) | 68 s | 17 |
+| playwright-mcp-tuned | 406k | $0.186 | 42% (21/50) | 55 s | 18 |
+| stagehand | 472k | $0.221 | 62% (31/50) | 77 s | 23 |
+| wdio-mcp | 252k | $0.112 | 56% (28/50) | 62 s | 22.5 |
+| wdio-session | 397k | $0.159 | 62% (31/50) | 107 s | 25 |
+| agent-browser | 1199k | $0.388 | 52% (26/50) | 105 s | 33 |
+| playwright-cli | 853k | $0.316 | 52% (26/50) | 95 s | 30 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
