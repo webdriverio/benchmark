@@ -19,17 +19,17 @@ This repository runs a fixed sample of 100 tasks from [Online-Mind2Web](https://
 ## Latest results
 
 <!-- results:start -->
-**Online-Mind2Web, Claude Sonnet 5.** Latest run: [2026-10-05-run-37252714051](results/2026-10-05-run-37252714051/report.md) on 2026-10-05, `claude-sonnet-5`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37252714051).
+**Online-Mind2Web, Claude Sonnet 5.** Latest run: [2026-10-05-run-37268732268](results/2026-10-05-run-37268732268/report.md) on 2026-10-05, `claude-sonnet-5`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37268732268).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 341k | $0.135 | 42% (21/50) | 68 s | 17 |
-| playwright-mcp-tuned | 406k | $0.186 | 42% (21/50) | 55 s | 18 |
-| stagehand | 472k | $0.221 | 62% (31/50) | 77 s | 23 |
-| wdio-mcp | 252k | $0.112 | 56% (28/50) | 62 s | 22.5 |
-| wdio-session | 397k | $0.159 | 62% (31/50) | 107 s | 25 |
-| agent-browser | 1199k | $0.388 | 52% (26/50) | 105 s | 33 |
-| playwright-cli | 853k | $0.316 | 52% (26/50) | 95 s | 30 |
+| playwright-mcp | 363k | $0.177 | 32% (16/50) | 74 s | 16 |
+| playwright-mcp-tuned | 284k | $0.165 | 36% (18/50) | 76 s | 14 |
+| stagehand | 549k | $0.216 | 60% (30/50) | 105 s | 26 |
+| wdio-mcp | 241k | $0.107 | 52% (26/50) | 73 s | 18.5 |
+| wdio-session | 306k | $0.128 | 54% (27/50) | 109 s | 20 |
+| agent-browser | 1116k | $0.355 | 48% (24/50) | 127 s | 32.5 |
+| playwright-cli | 680k | $0.259 | 40% (20/50) | 119 s | 26.5 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
