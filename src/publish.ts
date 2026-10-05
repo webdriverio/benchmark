@@ -12,7 +12,8 @@ import path from 'node:path'
 
 import { readRows, summaryTable, taskTable, failureList, summarize } from './report.ts'
 import { SETUPS } from './setups.ts'
-import { DEFAULT_SUITE, SUITES, TASKS, type SuiteId } from './tasks.ts'
+import { modelLabel } from './models.ts'
+import { SUITES, type SuiteId } from './tasks.ts'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const RESULTS = path.join(ROOT, 'results')
@@ -21,7 +22,7 @@ const ORDER = SETUPS.map((s) => s.id)
 
 interface SetupMeta { pkg: string, version?: string, url?: string, skipped?: string }
 interface Meta {
-    suite?: SuiteId
+    suite: SuiteId
     screenshots?: boolean
     startedAt: string
     finishedAt?: string
@@ -47,13 +48,12 @@ async function mergeMeta (dir: string): Promise<Meta> {
     const metas: Meta[] = await Promise.all(files.map(async (f) => JSON.parse(await fs.readFile(path.join(dir, f), 'utf8'))))
     const [first] = metas
     for (const m of metas) {
-        if (m.model !== first.model || m.runsPerTask !== first.runsPerTask || m.seed !== first.seed || (m.suite ?? DEFAULT_SUITE) !== (first.suite ?? DEFAULT_SUITE)) {
+        if (m.model !== first.model || m.runsPerTask !== first.runsPerTask || m.seed !== first.seed || m.suite !== first.suite) {
             throw new Error('result files disagree on suite, model, runs or seed; they come from different benchmark runs')
         }
     }
     return {
         ...first,
-        suite: first.suite ?? DEFAULT_SUITE,
         startedAt: metas.map((m) => m.startedAt).sort()[0],
         finishedAt: metas.map((m) => m.finishedAt ?? '').sort().at(-1) || undefined,
         tasks: [...new Set(metas.flatMap((m) => m.tasks))],
@@ -84,13 +84,8 @@ function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof r
         const version = s.skipped ? '–' : s.url ? `[\`${s.version}\`](${s.url})` : `\`${s.version}\``
         return `| \`${setup}\` | ${label} | [\`${s.pkg}\`](${home}) | ${version} | ${s.skipped ? `⚠️ skipped: ${s.skipped}` : 'ran'} |`
     })
-    const suite = meta.suite ?? DEFAULT_SUITE
-    const taskList = suite === DEFAULT_SUITE
-        ? meta.tasks.map((t) => {
-            const task = TASKS.find((x) => x.id === t)
-            return `\`${t}\`${task ? ` (${task.kind})` : ''}`
-        }).join(', ')
-        : `${meta.tasks.length} tasks sampled from Online-Mind2Web (ids in [\`tasks/online-mind2web.json\`](${REPO_URL}/blob/main/tasks/online-mind2web.json)); live websites, so runs are not exactly repeatable`
+    const suite = meta.suite
+    const taskList = `${meta.tasks.length} tasks sampled from Online-Mind2Web (ids in [\`tasks/online-mind2web.json\`](${REPO_URL}/blob/main/tasks/online-mind2web.json)); live websites, so runs are not exactly repeatable`
     const judge = rows.find((r) => (r as { judge?: Record<string, unknown> }).judge) as { judge?: { name: string, model: string, threshold: number, commit: string, patch: string } } | undefined
     const pendingNote = pending ? `\n\n⚠️ ${pending} run(s) were not judged and are left out of every number below.` : ''
 
@@ -108,7 +103,7 @@ Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.c
 | Limits | ${meta.maxTurns} turns, ${meta.timeoutMin} min per run |
 | Suite | ${SUITES[suite].label}: ${SUITES[suite].description} |
 | Tasks | ${taskList} |
-| Success decided by | ${judge?.judge ? `${judge.judge.name} (\`${judge.judge.model}\`, score threshold ${judge.judge.threshold}, [Online-Mind2Web@${judge.judge.commit.slice(0, 7)}](https://github.com/OSU-NLP-Group/Online-Mind2Web/tree/${judge.judge.commit}); patched: ${judge.judge.patch}). Its reasoning per run: \`judgments-*.jsonl\`` : 'code checks of the answer and the page state ([src/tasks.ts](' + REPO_URL + '/blob/main/src/tasks.ts))'} |
+| Success decided by | ${judge?.judge ? `${judge.judge.name} (\`${judge.judge.model}\`, score threshold ${judge.judge.threshold}, [Online-Mind2Web@${judge.judge.commit.slice(0, 7)}](https://github.com/OSU-NLP-Group/Online-Mind2Web/tree/${judge.judge.commit}); patched: ${judge.judge.patch}). Its reasoning per run: \`judgments-*.jsonl\`` : 'not judged yet'} |
 | Screenshots | ${meta.screenshots ? 'after every tool call, taken by the harness over CDP (no agent tokens)' : 'none'} |
 | Duration | ${minutes(meta)} |
 
@@ -138,7 +133,7 @@ ${failureList(rows)}
 |---|---|---|---|---|
 ${Object.entries(meta.environments ?? { all: meta.environment }).map(([setup, e]) => `| \`${setup}\` | ${e.os} | ${e.cpus} | ${e.node} | ${e.chrome} |`).join('\n')}
 
-Each setup ran in its own job on a fresh runner, in parallel with the others.
+Every setup ran in the same job, interleaved in one shuffled order.
 `
 }
 
@@ -177,12 +172,13 @@ async function renderIndex () {
             return `${s.version}<br>${Math.round(sum.passed / sum.total * 100)}% · ${Math.round(sum.tokens / 1000)}k`
         })
         const workflow = meta.workflowRun ? `[#${meta.workflowRun.id}](${meta.workflowRun.url})` : 'local'
-        lines.push(`| ${meta.startedAt.slice(0, 10)} | [${id}](${id}/report.md) | ${SUITES[meta.suite ?? DEFAULT_SUITE].label} | \`${meta.model}\` | ${rows.length} | ${cells.join(' | ')} | ${workflow} |`)
+        lines.push(`| ${meta.startedAt.slice(0, 10)} | [${id}](${id}/report.md) | ${SUITES[meta.suite].label} | \`${meta.model}\` | ${rows.length} | ${cells.join(' | ')} | ${workflow} |`)
     }
     lines.push('', '_Each setup cell: tool version, success rate, median tokens per task._', '')
     await fs.writeFile(path.join(RESULTS, 'README.md'), lines.join('\n'))
-    // the newest run of every suite, token study first
-    return (Object.keys(SUITES) as SuiteId[]).flatMap((suite) => runs.find((r) => (r.meta.suite ?? DEFAULT_SUITE) === suite) ?? [])
+    // the newest run of every suite and model
+    const seen = new Set<string>()
+    return runs.filter((r) => !seen.has(`${r.meta.suite}|${r.meta.model}`) && seen.add(`${r.meta.suite}|${r.meta.model}`))
 }
 
 async function updateReadme (latest: Awaited<ReturnType<typeof publishedRuns>>) {
@@ -195,8 +191,8 @@ async function updateReadme (latest: Awaited<ReturnType<typeof publishedRuns>>) 
     }
     const sections = latest.map(({ id, meta, rows }) => {
         const versions = Object.entries(meta.setups).map(([setup, s]) => s.skipped ? `${setup}: skipped` : `${setup}: \`${s.pkg}@${s.version}\``).join(' · ')
-        const suite = SUITES[meta.suite ?? DEFAULT_SUITE]
-        return `**${suite.label}.** Latest run: [${id}](results/${id}/report.md) on ${meta.startedAt.slice(0, 10)}, \`${meta.model}\`, ${meta.runsPerTask} runs per task${meta.workflowRun ? `, [workflow run](${meta.workflowRun.url})` : ''}.
+        const suite = SUITES[meta.suite]
+        return `**${suite.label}, ${modelLabel(meta.model)}.** Latest run: [${id}](results/${id}/report.md) on ${meta.startedAt.slice(0, 10)}, \`${meta.model}\`, ${meta.runsPerTask} runs per task${meta.workflowRun ? `, [workflow run](${meta.workflowRun.url})` : ''}.
 
 ${summaryTable(rows, ORDER)}
 

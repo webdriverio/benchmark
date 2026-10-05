@@ -7,8 +7,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 export interface Row {
-    /** missing in results from before suites existed: those are token-study runs */
-    suite?: string
+    suite: string
     setup: string
     task: string
     kind?: string
