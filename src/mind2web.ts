@@ -9,7 +9,7 @@
  * we commit only the ids of the sampled tasks and download the rest at run
  * time.
  *
- *   node src/mind2web.ts sample [--size 50] [--seed 1]   pick the sample and write tasks/online-mind2web.json
+ *   node src/mind2web.ts sample [--size 100] [--seed 1]   pick the sample and write tasks/online-mind2web.json
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -108,10 +108,10 @@ export function sample (tasks: Mind2WebTask[], size: number, seed: number): Samp
 if (import.meta.url === `file://${process.argv[1]}`) {
     const { positionals, values } = parseArgs({
         allowPositionals: true,
-        options: { size: { type: 'string', default: '50' }, seed: { type: 'string', default: '1' } }
+        options: { size: { type: 'string', default: '100' }, seed: { type: 'string', default: '1' } }
     })
     if (positionals[0] !== 'sample') {
-        console.error('usage: node src/mind2web.ts sample [--size 50] [--seed 1]')
+        console.error('usage: node src/mind2web.ts sample [--size 100] [--seed 1]')
         process.exit(1)
     }
     const tasks = await loadDataset()

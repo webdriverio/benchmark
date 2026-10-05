@@ -18,16 +18,16 @@ on:
         default: 4.0.0-dev.64
       playwright-mcp:
         description: '@playwright/mcp version'
-        default: latest
+        default: 0.0.83
       agent-browser:
         description: 'agent-browser version'
-        default: latest
+        default: 0.38.2
       playwright-cli:
         description: '@playwright/cli version'
-        default: latest
+        default: 0.1.22
       stagehand:
         description: 'browserbase/stagehand git ref (branch, tag or sha) to build its Claude Code MCP server from; latest = newest release tag'
-        default: latest
+        default: cd7b230778cf92269e4cb90e80d97f5113781c51
       model:
         description: 'Model for every agent: Claude through Anthropic, others through OpenRouter (needs the OPENROUTER_API_KEY secret)'
         type: choice
@@ -87,7 +87,8 @@ jobs:
     name: Run and judge
     needs: plan
     runs-on: ubuntu-latest
-    # GitHub's maximum: 50 tasks × 7 setups take four to five hours
+    # GitHub's maximum: 50 tasks × 7 setups take four to five hours, so a
+    # full run of the 100 tasks is two workflow runs, 50 task ids each
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5

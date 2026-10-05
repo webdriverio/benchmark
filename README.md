@@ -2,7 +2,7 @@
 
 How often does a coding agent get a browser task right, and what does it cost?
 
-This repository runs a fixed sample of 50 tasks from [Online-Mind2Web](https://github.com/OSU-NLP-Group/Online-Mind2Web), tasks on live websites written by the benchmark's authors, against seven browser tool setups. The model, the agent harness and the prompt are the same for every setup. Results: [benchmark.webdriver.io](https://benchmark.webdriver.io).
+This repository runs a fixed sample of 100 tasks from [Online-Mind2Web](https://github.com/OSU-NLP-Group/Online-Mind2Web), tasks on live websites written by the benchmark's authors, against seven browser tool setups. The model, the agent harness and the prompt are the same for every setup. Results: [benchmark.webdriver.io](https://benchmark.webdriver.io).
 
 | Setup | What the agent gets | npm package |
 |---|---|---|
@@ -70,12 +70,12 @@ The report prints medians per setup, plus a pass matrix per task.
 
 [Online-Mind2Web](https://github.com/OSU-NLP-Group/Online-Mind2Web) (COLM 2025) is 300 tasks on 136 live websites, written by researchers at Ohio State and judged by the benchmark's own judge. Neither we nor any tool vendor chose or tuned for these tasks.
 
-- **The sample:** 50 tasks, split across easy, medium and hard in the dataset's own proportions, drawn with a fixed seed from a fixed dataset revision ([`src/mind2web.ts`](src/mind2web.ts)). [`tasks/online-mind2web.json`](tasks/online-mind2web.json) lists their ids; anyone with the dataset can recompute it. The dataset is gated on Hugging Face, so its task texts stay out of this repository: the runner downloads them with `HF_TOKEN` (accept the [dataset terms](https://huggingface.co/datasets/osunlp/Online-Mind2Web) first).
+- **The sample:** 100 tasks, split across easy, medium and hard in the dataset's own proportions, drawn with a fixed seed from a fixed dataset revision ([`src/mind2web.ts`](src/mind2web.ts)). [`tasks/online-mind2web.json`](tasks/online-mind2web.json) lists their ids; anyone with the dataset can recompute it. The dataset is gated on Hugging Face, so its task texts stay out of this repository: the runner downloads them with `HF_TOKEN` (accept the [dataset terms](https://huggingface.co/datasets/osunlp/Online-Mind2Web) first).
 - **The prompt:** the task and its start page, plus one rule: don't sign in, create accounts, pay or enter personal data; stop right before that. Same for every setup.
 - **Screenshots:** after every tool call the harness, not the agent, screenshots the page the agent is on, over the Chrome DevTools Protocol of the browser the run started ([`src/screenshots.ts`](src/screenshots.ts)). No agent pays tokens for them. Playwright (MCP and CLI) starts Chrome without a debugging port, so for this suite its config adds one; nothing else about any setup changes. We checked that capturing doesn't change tool behaviour (same tokens and results with and without, for Stagehand and agent-browser).
 - **The judge:** [WebJudge](https://github.com/OSU-NLP-Group/Online-Mind2Web#-webjudge) with `o4-mini`, as its authors recommend (86% agreement with human reviewers), at a pinned commit ([`src/judge.ts`](src/judge.ts)). It sees the task, the agent's actions and the screenshots, not the agent's final answer, and comes from another model family than the agents, so it can't favour its own. The action history is exactly what the agent issued (the shell command or the tool call), never a tool's reply, so a tool with chattier output gains nothing. Two changes to running it, both mechanical: WebJudge sends `max_tokens=512` and `temperature=0`, which OpenAI's reasoning models reject (and 512 tokens would go to reasoning), so the one API call sends `max_completion_tokens` instead; and its worker processes need the `fork` start method, which a wrapper sets. The judge's reasoning for every run is published in `judgments-*.jsonl`, for spot checks.
 - **Unjudged runs don't count:** a run the judge couldn't decide stays pending and is left out of every number, with a note in the report.
-- **Uncertainty is shown:** 50 tasks can't separate close results. The website shows a 95% confidence interval under every success rate.
+- **Uncertainty is shown:** 100 tasks can't separate close results either. The website shows a 95% confidence interval under every success rate.
 
 Limitations to keep in mind:
 
@@ -108,10 +108,10 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 |---|---|---|
 | `webdriverio` | `10.0.0-alpha.175` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
 | `wdio-mcp` | `4.0.0-dev.64` | `@wdio/mcp` version |
-| `playwright-mcp` | `latest` | `@playwright/mcp` version, for both Playwright setups |
-| `agent-browser` | `latest` | `agent-browser` version |
-| `playwright-cli` | `latest` | `@playwright/cli` version |
-| `stagehand` | `latest` | git ref of `browserbase/stagehand` to build (branch, tag or sha); `latest` is the newest `@browserbasehq/stagehand@x.y.z` release tag |
+| `playwright-mcp` | `0.0.83` | `@playwright/mcp` version, for both Playwright setups |
+| `agent-browser` | `0.38.2` | `agent-browser` version |
+| `playwright-cli` | `0.1.22` | `@playwright/cli` version |
+| `stagehand` | `cd7b230…` | git ref of `browserbase/stagehand` to build (branch, tag or sha); `latest` is the newest `@browserbasehq/stagehand@x.y.z` release tag |
 | `model` | `claude-sonnet-5` | model for every agent: `claude-sonnet-5`, or `deepseek-flash-4-1` through OpenRouter (needs the `OPENROUTER_API_KEY` repository secret) |
 | `runs` | `1` | runs per task and setup |
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
@@ -119,7 +119,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `concurrency` | `4` | runs at the same time |
 | `publish` | on | commit the results to this repository |
 
-npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
+Every default is pinned to the version of the published results, so a new run adds to their rows instead of starting new ones. npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
 
 The workflow runs every setup in one job, has WebJudge judge every run, then publishes:
 
@@ -138,12 +138,12 @@ Requires Node.js 24, Chrome and `python3` (for the judge). The Agent SDK picks u
 npm install
 npm run bench -- --dry-run                         # print the shuffled plan
 npm run bench -- --setups wdio-session,playwright-mcp --tasks om2w-180ed2ec
-npm run bench                                      # everything: 7 setups × 50 tasks
+npm run bench                                      # everything: 7 setups × 100 tasks
 node src/judge.ts results/<id>                     # WebJudge decides every run, writes judgments-*.jsonl
 node src/publish.ts results/<id>                   # report.md, results index, README section
 ```
 
-`node src/mind2web.ts sample` picks the 50 tasks again (same seed, same sample) and writes `tasks/online-mind2web.json`.
+`node src/mind2web.ts sample` picks the 100 tasks again (same seed, same sample; a larger `--size` keeps every task of a smaller one) and writes `tasks/online-mind2web.json`.
 
 Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `PLAYWRIGHT_CLI_VERSION`, `AGENT_BROWSER_VERSION` and `STAGEHAND_REF` (default `latest`, except `WDIO_VERSION` and `WDIO_MCP_VERSION`: `wdio session` ships with v10, and `@wdio/mcp` 4 is still a dev build; see the workflow inputs above for the current defaults). To test an unreleased WebdriverIO:
 
@@ -153,7 +153,7 @@ export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdr
 
 Runner options: `--setups`, `--tasks`, `--runs` (default 1), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10), `--concurrency` (default 1; parallel browsers compete for CPU, which shows in the time per task), `--screenshots` (always on: WebJudge decides from them).
 
-A full run is 350 agent runs and takes four to five hours at concurrency 4.
+A full run is 700 agent runs. 350 take four to five hours at concurrency 4, and a GitHub job stops after six, so in the workflow a full run is two runs with 50 task ids each (`tasks`). Runs of the same tool versions and model count toward one row on the website.
 
 ### Stagehand
 
