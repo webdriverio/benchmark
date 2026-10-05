@@ -1,5 +1,5 @@
 /**
- * node src/run.ts [--suite token-study] [--setups a,b] [--tasks x,y] [--runs 3] [--model claude-sonnet-5] [--seed 1] [--out-dir results/<id>] [--dry-run]
+ * node src/run.ts [--suite online-mind2web] [--setups a,b] [--tasks x,y] [--runs 1] [--model claude-sonnet-5] [--seed 1] [--out-dir results/<id>] [--dry-run]
  *
  * Installs the tool behind every selected setup, then runs every
  * setup × task × repetition once in one shuffled order (fixed seed, so a
@@ -9,7 +9,7 @@
  *   meta-<label>.json    model, versions, environment, workflow run link
  *
  * `node src/publish.ts <out-dir>` merges those into meta.json and report.md.
- * The workflow runs one setup per job and publishes once all are done.
+ * The workflow runs every setup in one job and publishes when it is done.
  */
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -19,7 +19,6 @@ import { promisify } from 'node:util'
 import { parseArgs } from 'node:util'
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 
-import { startSites, resetSite, siteBase } from './sites.ts'
 import { SUITES, loadTasks, parseAnswer, type SuiteId } from './tasks.ts'
 import { SETUPS, type Setup } from './setups.ts'
 import { installGitTool, installTool, type InstalledTool } from './tools.ts'
@@ -37,17 +36,17 @@ const SYSTEM_PROMPT = `You are a browser automation agent. Complete the task in 
 
 const { values: args } = parseArgs({
     options: {
-        suite: { type: 'string', default: 'token-study' },
+        suite: { type: 'string', default: 'online-mind2web' },
         setups: { type: 'string', default: 'all' },
         tasks: { type: 'string', default: 'all' },
-        runs: { type: 'string', default: '3' },
+        runs: { type: 'string', default: '1' },
         model: { type: 'string', default: 'claude-sonnet-5' },
         seed: { type: 'string', default: '1' },
         'out-dir': { type: 'string' },
         'max-turns': { type: 'string', default: '80' },
         'timeout-min': { type: 'string', default: '10' },
-        // runs at the same time; every run gets its own page scope (see sites.ts).
-        // Keep 1 for published numbers: parallel browsers compete for CPU.
+        // runs at the same time; parallel browsers compete for CPU, so time
+        // per task rises with it
         concurrency: { type: 'string', default: '1' },
         // a screenshot after every tool call; always on for suites judged from screenshots
         screenshots: { type: 'boolean', default: false },
@@ -195,7 +194,6 @@ const meta = {
 }
 await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
 
-const sites = await startSites()
 const startedMs = startedAt.getTime()
 
 let done = 0
@@ -205,8 +203,6 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     const runId = `${setup.id}-${startedMs}-${String(i + 1).padStart(3, '0')}`
     const cwd = path.join(ROOT, '.runs', runId)
     await fs.mkdir(cwd, { recursive: true })
-    const scope = `s${i + 1}`
-    resetSite(task.id, scope)
 
     const abortController = new AbortController()
     const timer = setTimeout(() => {
@@ -242,7 +238,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     try {
         const setupOptions = withTmpDir(await setup.options(tool, cwd, runId, { screenshots: args.screenshots }), tmp, providerEnv)
         const stream = query({
-            prompt: task.prompt.replaceAll('{base}', siteBase(scope)),
+            prompt: task.prompt,
             options: {
                 model: model.apiModel,
                 thinking: { type: 'disabled' },
@@ -303,7 +299,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
 
     const text = result?.subtype === 'success' ? result.result : ''
     const answer = parseAnswer(text)
-    const check = row.error ? { pass: false, detail: String(row.error) } : await task.check(answer, scope)
+    const check = row.error ? { pass: false, detail: String(row.error) } : await task.check(answer)
     const usage = result?.usage
     const tokens = {
         input: usage?.input_tokens ?? 0,
@@ -354,7 +350,6 @@ await Promise.all(Array.from({ length: Math.max(1, Number(args.concurrency)) }, 
     }
 }))
 
-await sites.close()
 meta.finishedAt = new Date().toISOString()
 await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
 const judgeHint = tasks.some((t) => t.kind === 'live') ? `\nJudge: node src/judge.ts ${path.relative(ROOT, outDir)} (needs OPENAI_API_KEY)` : ''

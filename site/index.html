@@ -52,7 +52,7 @@
 
   <div class="controls-bar" id="controls">
     <div class="wrap controls">
-      <div class="seg-group">
+      <div class="seg-group" id="suite-group">
         <span class="seg-label" id="suite-label">Tasks</span>
         <div class="seg" role="radiogroup" aria-labelledby="suite-label" id="suite"></div>
       </div>
@@ -110,7 +110,7 @@
       <div class="method-grid">
         <article class="card">
           <h3>Tasks we didn't write</h3>
-          <p>The main task set is a fixed random sample of 50 tasks from <a href="https://github.com/OSU-NLP-Group/Online-Mind2Web">Online-Mind2Web</a> (COLM 2025): 300 tasks on 136 live websites, written by researchers at Ohio State. The sample keeps the dataset's mix of easy, medium and hard tasks and uses a fixed seed, so anyone can recompute it. No tool vendor, including us, picked these tasks.</p>
+          <p>The tasks are a fixed random sample of 50 tasks from <a href="https://github.com/OSU-NLP-Group/Online-Mind2Web">Online-Mind2Web</a> (COLM 2025): 300 tasks on 136 live websites, written by researchers at Ohio State. The sample keeps the dataset's mix of easy, medium and hard tasks and uses a fixed seed, so anyone can recompute it. No tool vendor, including us, picked these tasks.</p>
         </article>
         <article class="card">
           <h3>An independent judge</h3>
@@ -151,7 +151,7 @@ node src/judge.ts results/&lt;id&gt;</code></pre>
 
     <section id="versions" class="block" aria-labelledby="versions-title">
       <div class="block-head">
-        <h2 id="versions-title">Every version tested</h2>
+        <h2 id="versions-title">Tested versions</h2>
         <p class="muted">Every run of a tool version with this model counts toward its row, across workflow runs. Open a version for its results per task and the runs behind them.</p>
       </div>
       <div id="by-version" class="versions"></div>

@@ -193,6 +193,8 @@ function modelsFor (suite) {
 }
 
 function renderControls () {
+    // a choice of one is no choice
+    $('#suite-group').hidden = suitesWithRuns().length < 2
     segmented($('#suite'), suitesWithRuns(), state.suite, (v) => {
         state.suite = v
         const models = modelsFor(v)

@@ -5,7 +5,7 @@
  * data.json, which aggregates every published run in results/.
  *
  * Runs are grouped by suite + setup + package version + model: every
- * token-study run of `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward
+ * Online-Mind2Web run of `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward
  * one row, no matter which workflow run produced it. A new tool version
  * starts a new row, and suites never mix.
  */
@@ -16,7 +16,7 @@ import { parseArgs } from 'node:util'
 import { modelLabel } from './models.ts'
 import { readRows, median, type Row } from './report.ts'
 import { SETUPS } from './setups.ts'
-import { DEFAULT_SUITE, SUITES, TASKS } from './tasks.ts'
+import { SUITES, type SuiteId } from './tasks.ts'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const RESULTS = path.join(ROOT, 'results')
@@ -27,7 +27,7 @@ const OUT = path.resolve(ROOT, args.out)
 
 interface SetupMeta { pkg: string, version?: string, skipped?: string }
 interface Meta {
-    suite?: string
+    suite: SuiteId
     startedAt: string
     finishedAt?: string
     model: string
@@ -76,7 +76,7 @@ for (const id of (await fs.readdir(RESULTS).catch(() => [])).sort()) {
     }
 }
 
-const suiteOf = (meta: Meta) => meta.suite ?? DEFAULT_SUITE
+const suiteOf = (meta: Meta) => meta.suite
 
 // suite + setup + version + model → every row, from every run
 const groups = new Map<string, { suite: string, setup: string, pkg: string, version: string, model: string, runIds: Set<string>, rows: Row[], firstRun: string, lastRun: string }>()
@@ -102,7 +102,6 @@ for (const { id, meta, rows } of runs) {
  */
 function tasksBySuite () {
     const out: Record<string, { id: string, kind: string, level?: string }[]> = Object.fromEntries(Object.keys(SUITES).map((s) => [s, []]))
-    out[DEFAULT_SUITE] = TASKS.map((t) => ({ id: t.id, kind: t.kind }))
     for (const { meta, rows } of runs) {
         const list = out[suiteOf(meta)] ??= []
         for (const r of rows) {
@@ -112,10 +111,8 @@ function tasksBySuite () {
         }
     }
     const levels = ['easy', 'medium', 'hard']
-    for (const [suite, list] of Object.entries(out)) {
-        if (suite !== DEFAULT_SUITE) {
-            list.sort((a, b) => levels.indexOf(a.level ?? '') - levels.indexOf(b.level ?? '') || a.id.localeCompare(b.id))
-        }
+    for (const list of Object.values(out)) {
+        list.sort((a, b) => levels.indexOf(a.level ?? '') - levels.indexOf(b.level ?? '') || a.id.localeCompare(b.id))
     }
     return out
 }

@@ -2,16 +2,14 @@
   "name": "@wdio/benchmark",
   "private": true,
   "type": "module",
-  "description": "Browser agent benchmark: WebdriverIO, Playwright MCP and Stagehand on the tasks from Stagehand's Playwright MCP token study",
+  "description": "Browser agent benchmark: browser tools for AI agents on live-web tasks from Online-Mind2Web, with the same model, harness and prompt for every tool",
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "sites": "node src/sites.ts",
     "bench": "node src/run.ts",
     "report": "node src/report.ts",
     "check:types": "tsc --noEmit",
-    "selftest": "node src/selftest.ts",
     "plan": "node src/plan.ts",
     "publish": "node src/publish.ts",
     "site": "node src/site.ts"
