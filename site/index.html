@@ -17,6 +17,14 @@
 <meta name="twitter:description" content="Success rate, cost, tokens and time of browser tools for AI agents on live-web tasks. Open data, every run published.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
+<script>
+  // ?embed=leaderboard shows only the leaderboard, for an iframe; ?theme= follows the embedding page
+  (() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('embed') === 'leaderboard') document.documentElement.dataset.embed = 'leaderboard'
+    if (['light', 'dark'].includes(params.get('theme'))) document.documentElement.dataset.theme = params.get('theme')
+  })()
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -164,6 +172,8 @@ node src/judge.ts results/&lt;id&gt;</code></pre>
       </div>
       <div class="card flush"><div class="table-scroll"><table id="run-list" class="data"></table></div></div>
     </section>
+
+    <p class="embed-link"><a href="./" id="full-results">Cost vs. success, results per task, methodology and every run on benchmark.webdriver.io →</a></p>
 
     <p id="empty" class="empty" hidden>No published benchmark runs yet.</p>
   </div>

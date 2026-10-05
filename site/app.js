@@ -523,6 +523,32 @@ function renderRuns (runs) {
         </tbody>`
 }
 
+/* ---------- embed ---------- */
+
+/**
+ * In an iframe (?embed=leaderboard): links open outside the frame, the
+ * embedding page learns the height to size the frame, and it can switch
+ * the theme without a reload.
+ */
+function embed () {
+    const base = document.createElement('base')
+    base.target = '_blank'
+    document.head.append(base)
+    const link = $('#full-results')
+    const reportHeight = () => {
+        // keep the model in the link, so it opens on the same view
+        link.href = `./?suite=${encodeURIComponent(state.suite)}&model=${encodeURIComponent(state.model)}`
+        window.parent.postMessage({ type: 'wdio-benchmark:height', height: Math.ceil(document.documentElement.getBoundingClientRect().height) }, '*')
+    }
+    new ResizeObserver(reportHeight).observe(document.documentElement)
+    document.addEventListener('click', () => setTimeout(reportHeight))
+    window.addEventListener('message', (e) => {
+        if (e.source === window.parent && e.data?.type === 'wdio-benchmark:theme' && ['light', 'dark'].includes(e.data.theme)) {
+            document.documentElement.dataset.theme = e.data.theme
+        }
+    })
+}
+
 /* ---------- page ---------- */
 
 function update () {
@@ -563,6 +589,9 @@ if (!data.runs.length) {
     state.axis = Object.hasOwn(METRICS, params.get('x') ?? '') ? params.get('x') : 'cost'
     renderStats()
     update()
+    if (document.documentElement.dataset.embed) {
+        embed()
+    }
     let width = $('#scatter').clientWidth
     new ResizeObserver(() => {
         if ($('#scatter').clientWidth !== width) {
