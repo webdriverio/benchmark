@@ -6,6 +6,7 @@
  * run can be repeated). Writes into --out-dir:
  *
  *   runs-<label>.jsonl   one line per run
+ *   steps-<label>.jsonl  per run, what the agent did step by step (see steps.ts)
  *   meta-<label>.json    model, versions, environment, workflow run link
  *
  * `node src/publish.ts <out-dir>` merges those into meta.json and report.md.
@@ -23,6 +24,7 @@ import { SUITES, loadTasks, parseAnswer, type SuiteId } from './tasks.ts'
 import { SETUPS, type Setup } from './setups.ts'
 import { installGitTool, installTool, type InstalledTool } from './tools.ts'
 import { captureScreenshot } from './screenshots.ts'
+import { traceOf, type Step } from './steps.ts'
 import { costOf, modelEnv, openRouterPricing, resolveModel } from './models.ts'
 
 const exec = promisify(execFile)
@@ -165,6 +167,7 @@ if (args['dry-run']) {
 
 await fs.mkdir(outDir, { recursive: true })
 const runsFile = path.join(outDir, `runs-${label}.jsonl`)
+const stepsFile = path.join(outDir, `steps-${label}.jsonl`)
 const transcriptDir = path.join(ROOT, 'transcripts', path.basename(outDir))
 const metaFile = path.join(outDir, `meta-${label}.json`)
 const meta = {
@@ -225,7 +228,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     // their paths to 104 characters
     const tmp = await fs.mkdtemp('/tmp/wb-')
     // one entry per tool call: what the agent did and what the page looked like after it
-    const steps: { step: number, toolUseId: string, tool: string, input: unknown, screenshot?: string, url?: string }[] = []
+    const steps: Step[] = []
     const screenDir = path.join(transcriptDir, runId)
     const afterTool = async (input: unknown) => {
         const { tool_name: tool, tool_input: toolInput, tool_use_id: toolUseId } = input as { tool_name: string, tool_input: unknown, tool_use_id: string }
@@ -338,6 +341,7 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     }
     await fs.rm(cwd, { recursive: true, force: true })
     await fs.rm(tmp, { recursive: true, force: true })
+    await fs.appendFile(stepsFile, JSON.stringify({ runId, steps: traceOf(transcript, steps) }) + '\n')
     await fs.appendFile(runsFile, JSON.stringify(row) + '\n')
 
     console.log(`[${++done}/${plan.length}] ${row.pending ? '…' : check.pass ? '✓' : '✗'} ${setup.id.padEnd(22)} ${task.id.padEnd(20)} ${String(Math.round(((row.tokens as { total: number }).total) / 1000)).padStart(4)}k tok  ${(((row.wallMs as number) / 1000).toFixed(1)).padStart(6)}s  $${(row.costUsd as number ?? 0).toFixed(3)}  ${check.pass || row.pending ? '' : check.detail}`)
