@@ -4,63 +4,179 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Browser Agent Benchmark · WebdriverIO</title>
-<meta name="description" content="How many tokens, how much money and how much time coding agents need to finish real browser tasks with WebdriverIO, Playwright MCP and Stagehand. Every run, every version, open data.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23EA5906'/><text x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'>B</text></svg>">
+<meta name="description" content="An open benchmark of browser tools for AI agents: success rate, cost, tokens and time on real tasks on live websites, with the same model, harness and prompts for every tool. Every run is published.">
+<meta name="theme-color" content="#ea5906">
+<link rel="canonical" href="https://benchmark.webdriver.io/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WebdriverIO">
+<meta property="og:url" content="https://benchmark.webdriver.io/">
+<meta property="og:title" content="Browser Agent Benchmark">
+<meta property="og:description" content="How often do AI agents get a browser task right, and what does it cost? WebdriverIO, Playwright, Stagehand and agent-browser on 50 live-web tasks from Online-Mind2Web.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Browser Agent Benchmark">
+<meta name="twitter:description" content="Success rate, cost, tokens and time of browser tools for AI agents on live-web tasks. Open data, every run published.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="site">
-  <div class="wrap">
-    <a class="brand" href="./"><span class="mark" aria-hidden="true">B</span> Browser Agent Benchmark</a>
-    <nav>
-      <a href="#versions">By version</a>
-      <a href="#runs">Runs</a>
-      <a id="method-link" href="https://github.com/webdriverio/benchmark#the-tasks">Method</a>
-      <a id="repo-link" href="https://github.com/webdriverio/benchmark">GitHub</a>
+  <div class="wrap bar">
+    <a class="brand" href="./" aria-label="Browser Agent Benchmark, home">
+      <img src="logo.svg" width="28" height="28" alt="">
+      <span><strong>Browser Agent Benchmark</strong><span class="by">by WebdriverIO</span></span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#leaderboard" class="hide-sm">Leaderboard</a>
+      <a href="#tradeoff" class="hide-sm">Cost vs. success</a>
+      <a href="#tasks" class="hide-sm">Tasks</a>
+      <a href="#method">Methodology</a>
+      <a href="#versions" class="hide-md">Versions</a>
+      <a class="gh" href="https://github.com/webdriverio/benchmark" aria-label="Source on GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="hide-sm">GitHub</span>
+      </a>
     </nav>
   </div>
 </header>
 
-<main class="wrap">
-  <section class="intro">
-    <h1>What does it cost an agent to get a browser task right?</h1>
-    <p>Coding agents run the same browser tasks with different tools, with the same model, harness and prompts for every tool. We measure tokens, cost, time and whether the task was done. Every run, prompt and check is <a id="data-link" href="https://github.com/webdriverio/benchmark">public</a>.</p>
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Open benchmark · <span id="updated">loading…</span></p>
+      <h1>How often does an AI agent get a browser task right, and what does it cost?</h1>
+      <p class="lede">We give coding agents real tasks on live websites and swap only the browser tool. The model, harness and prompt stay the same for every tool. An independent judge decides success. Every run, prompt and judgment is <a href="https://github.com/webdriverio/benchmark/tree/main/results">published</a>.</p>
+      <dl class="stats" id="stats"></dl>
+    </div>
   </section>
 
-  <div class="controls" role="group" aria-label="Filters">
-    <label>Tasks <select id="suite"></select></label>
-    <label>Model <select id="model"></select></label>
-    <span class="muted" id="freshness"></span>
+  <div class="controls-bar" id="controls">
+    <div class="wrap controls">
+      <div class="seg-group">
+        <span class="seg-label" id="suite-label">Tasks</span>
+        <div class="seg" role="radiogroup" aria-labelledby="suite-label" id="suite"></div>
+      </div>
+      <div class="seg-group">
+        <span class="seg-label" id="model-label">Model</span>
+        <div class="seg" role="radiogroup" aria-labelledby="model-label" id="model"></div>
+      </div>
+      <span class="freshness muted" id="freshness"></span>
+    </div>
   </div>
 
-  <p id="suite-description" class="suite-description"></p>
+  <div class="wrap">
+    <p id="suite-description" class="suite-description"></p>
 
-  <section aria-labelledby="latest-title">
-    <h2 id="latest-title">Latest version of each tool</h2>
-    <p class="muted">Medians per task run. Tokens include cache reads and writes. Lower is better, except success. The range under a success rate is its 95% confidence interval: differences inside it can be chance.</p>
-    <div class="table-scroll"><table id="latest" class="data"></table></div>
-  </section>
+    <section id="leaderboard" class="block" aria-labelledby="leaderboard-title">
+      <div class="block-head">
+        <h2 id="leaderboard-title">Leaderboard</h2>
+        <p class="muted">The newest version of each tool that ran every task. Click a column to sort. Cost, tokens, time and tool calls are medians per task. Tokens include cache reads and writes.</p>
+      </div>
+      <div class="card flush"><div class="table-scroll"><table id="latest" class="data board"></table></div></div>
+      <p class="note"><span class="swatch-band" aria-hidden="true"></span> The shaded band is the leader's 95% confidence interval. A tool whose interval overlaps it is not reliably worse: with this many tasks, the gap could be chance.</p>
+    </section>
 
-  <section id="versions" aria-labelledby="versions-title">
-    <h2 id="versions-title">By package version</h2>
-    <p class="muted">Every run of a tool version with this model counts toward its row, across workflow runs. Select a version for per-task results and the runs behind it.</p>
-    <div id="by-version"></div>
-  </section>
+    <section id="tradeoff" class="block" aria-labelledby="tradeoff-title">
+      <div class="block-head row">
+        <div>
+          <h2 id="tradeoff-title">Cost vs. success</h2>
+          <p class="muted">Each point is a tool. The line through it is its 95% confidence interval. Up and to the left is better.</p>
+        </div>
+        <div class="seg small" role="radiogroup" aria-label="Horizontal axis" id="axis"></div>
+      </div>
+      <div class="card chart-card"><div id="scatter" class="chart"></div></div>
+    </section>
 
-  <section id="runs" aria-labelledby="runs-title">
-    <h2 id="runs-title">Runs</h2>
-    <div class="table-scroll"><table id="run-list" class="data"></table></div>
-  </section>
+    <section id="tasks" class="block" aria-labelledby="tasks-title">
+      <div class="block-head">
+        <h2 id="tasks-title">Results per task</h2>
+        <p class="muted" id="tasks-note"></p>
+      </div>
+      <div class="card flush"><div class="table-scroll" id="by-level"></div></div>
+      <div class="card flush heat-card"><div class="table-scroll" id="heatmap"></div></div>
+      <div class="legend" id="heat-legend" aria-hidden="true">
+        <span><i class="cell pass"></i> passed</span>
+        <span><i class="cell part"></i> passed in some runs</span>
+        <span><i class="cell fail"></i> failed</span>
+        <span><i class="cell none"></i> not run</span>
+      </div>
+    </section>
 
-  <p id="empty" class="empty" hidden>No published benchmark runs yet.</p>
+    <section id="method" class="block" aria-labelledby="method-title">
+      <div class="block-head">
+        <h2 id="method-title">Methodology</h2>
+        <p class="muted">The full description, including every way we keep it fair, is in the <a href="https://github.com/webdriverio/benchmark#readme">README</a>.</p>
+      </div>
+      <div class="method-grid">
+        <article class="card">
+          <h3>Tasks we didn't write</h3>
+          <p>The main task set is a fixed random sample of 50 tasks from <a href="https://github.com/OSU-NLP-Group/Online-Mind2Web">Online-Mind2Web</a> (COLM 2025): 300 tasks on 136 live websites, written by researchers at Ohio State. The sample keeps the dataset's mix of easy, medium and hard tasks and uses a fixed seed, so anyone can recompute it. No tool vendor, including us, picked these tasks.</p>
+        </article>
+        <article class="card">
+          <h3>An independent judge</h3>
+          <p>The benchmark's own judge, <a href="https://github.com/OSU-NLP-Group/Online-Mind2Web#-webjudge">WebJudge</a>, decides success with <code>o4-mini</code>. That model comes from another family than the agents. It sees the task, the commands the agent issued and screenshots the harness took after every step. It never sees a tool's own output. Every judgment and its reasoning is published.</p>
+        </article>
+        <article class="card">
+          <h3>Only the tool changes</h3>
+          <p>Every tool gets the same model, the same harness (Claude Agent SDK) and the same system prompt, plus one sentence on how to reach the browser. Tools that ship an agent skill get it. Built-in web access is switched off. Every tool runs in the same job, from the same IP address, in a seeded random order.</p>
+        </article>
+        <article class="card">
+          <h3>What we measure</h3>
+          <p>Success is the share of tasks the judge accepts, with a 95% <a href="https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval">Wilson interval</a>. Cost, tokens (input, output and cache), wall-clock time and tool calls are medians per task. Cost comes from the provider's prices. Tool versions are pinned and recorded with every run.</p>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <h3>Limitations</h3>
+          <ul class="tight">
+            <li>Live websites change, block bots and show CAPTCHAs, so runs are not exactly repeatable. A blocked run counts as a failure for every tool it hits.</li>
+            <li>50 tasks and one run per task give intervals about ±13 points wide. Close results are ties.</li>
+            <li>WebJudge disagrees with human reviewers on about one run in seven.</li>
+            <li>A tool that does several steps in one call leaves fewer screenshots for the judge to check.</li>
+            <li>This benchmark is maintained by the WebdriverIO project, which builds two of the tools. That is why the code, prompts, raw data and judgments are all public. If a setup looks wrong, <a href="https://github.com/webdriverio/benchmark/issues">tell us</a>.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Reproduce it</h3>
+          <p>Every number on this page comes from a workflow run you can inspect. To run it yourself you need Node.js 24 and Chrome:</p>
+<pre><code>git clone https://github.com/webdriverio/benchmark
+cd benchmark && npm install
+npm run bench -- --suite online-mind2web --runs 1
+node src/judge.ts results/&lt;id&gt;</code></pre>
+          <p class="muted small">Online-Mind2Web is gated on Hugging Face. Accept its terms, then set <code>HF_TOKEN</code>. The judge needs <code>OPENAI_API_KEY</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="versions" class="block" aria-labelledby="versions-title">
+      <div class="block-head">
+        <h2 id="versions-title">Every version tested</h2>
+        <p class="muted">Every run of a tool version with this model counts toward its row, across workflow runs. Open a version for its results per task and the runs behind them.</p>
+      </div>
+      <div id="by-version" class="versions"></div>
+    </section>
+
+    <section id="runs" class="block" aria-labelledby="runs-title">
+      <div class="block-head">
+        <h2 id="runs-title">Run log</h2>
+        <p class="muted">Every published workflow run for these tasks and this model, newest first.</p>
+      </div>
+      <div class="card flush"><div class="table-scroll"><table id="run-list" class="data"></table></div></div>
+    </section>
+
+    <p id="empty" class="empty" hidden>No published benchmark runs yet.</p>
+  </div>
 </main>
 
 <footer class="site">
-  <div class="wrap muted">
-    Built from <a id="footer-repo" href="https://github.com/webdriverio/benchmark">webdriverio/benchmark</a> · <span id="generated"></span> · A <a href="https://webdriver.io">WebdriverIO</a> project
+  <div class="wrap foot">
+    <div class="brand small"><img src="logo.svg" width="20" height="20" alt=""> A <a href="https://webdriver.io">WebdriverIO</a> project</div>
+    <div class="muted">Code and data: <a href="https://github.com/webdriverio/benchmark">webdriverio/benchmark</a> · Data <span id="generated"></span> · <a href="data.json">data.json</a></div>
   </div>
 </footer>
 
+<div id="tooltip" class="tooltip" role="tooltip" hidden></div>
 <script src="app.js" type="module"></script>
 </body>
 </html>

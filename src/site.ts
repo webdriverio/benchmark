@@ -13,6 +13,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
 
+import { modelLabel } from './models.ts'
 import { readRows, median, type Row } from './report.ts'
 import { SETUPS } from './setups.ts'
 import { DEFAULT_SUITE, SUITES, TASKS } from './tasks.ts'
@@ -126,6 +127,7 @@ const data = {
         ? { id: s.id, label: s.label, pkg: s.tool.repo, link: `https://github.com/${s.tool.repo}` }
         : { id: s.id, label: s.label, pkg: s.tool.pkg, link: `https://www.npmjs.com/package/${s.tool.pkg}` }),
     suites: Object.entries(SUITES).map(([id, s]) => ({ id, label: s.label, description: s.description })),
+    models: [...new Set(runs.map((r) => r.meta.model))].map((id) => ({ id, label: modelLabel(id) })),
     tasks: tasksBySuite(),
     groups: [...groups.values()].filter((g) => g.rows.length).map((g) => ({
         suite: g.suite,

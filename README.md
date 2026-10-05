@@ -198,7 +198,7 @@ The facade always launches a headed browser. In the workflow every job runs unde
 
 [benchmark.webdriver.io](https://benchmark.webdriver.io) renders every published run. `npm run site` builds it into `dist/`: a static page plus `data.json`, which [`src/site.ts`](src/site.ts) aggregates from `results/`.
 
-Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows the latest version of each tool, every version with per-task results and the runs behind it, and a log of all runs.
+Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows a leaderboard of the newest version of each tool that ran every task (pilots on a few tasks are listed but not ranked), success against cost, tokens or time with 95% confidence intervals, success per difficulty and per task, every version with the runs behind it, and a log of all runs.
 
 It is hosted on Vercel (project `webdriverio-benchmark`), which is connected to this repository and builds every push to `main` with the settings in [`vercel.json`](vercel.json), including the result commits of the Benchmark workflow. To preview locally:
 

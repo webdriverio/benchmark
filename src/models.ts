@@ -30,6 +30,16 @@ const OPENROUTER_MODELS: Record<string, string> = {
     'deepseek-flash-4-1': 'deepseek/deepseek-v4.1-flash'
 }
 
+const LABELS: Record<string, string> = {
+    'claude-sonnet-5': 'Claude Sonnet 5',
+    'deepseek-flash-4-1': 'DeepSeek V4.1 Flash'
+}
+
+/** the name people know a model by, for the website */
+export function modelLabel (id: string) {
+    return LABELS[id] ?? id
+}
+
 export function resolveModel (id: string): Model {
     if (OPENROUTER_MODELS[id]) {
         return { id, provider: 'openrouter', apiModel: OPENROUTER_MODELS[id] }
