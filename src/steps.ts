@@ -7,12 +7,12 @@
  * transcripts the workflow keeps as an artifact (for runs published before
  * the runner wrote step logs itself).
  *
- * One line per run: { runId, steps: [{ tool, action, thought?, url?, error? }] }.
+ * One line per run: { runId, steps: [{ tool, action, thought?, url?, output?, error? }] }.
  * The action is what the agent issued, as WebJudge sees it (the shell command
- * or the tool call), never the tool's reply; `thought` is the agent's text
- * right before the call, `url` the page after it, `error` the start of a
- * failed or denied call's reply. Long values are cut, so a full run of 700
- * traces stays a few MB in git.
+ * or the tool call); `thought` is the agent's text right before the call,
+ * `url` the page after it, `output` an excerpt of what the tool replied (its
+ * start and end) and `error` the start of a failed or denied call's reply.
+ * Long values are cut, so a full run of 700 traces stays a few MB in git.
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -20,7 +20,7 @@ import path from 'node:path'
 /** one tool call as the harness saw it (screenshots.ts hook, steps.json) */
 export interface Step { step: number, toolUseId?: string, tool: string, input: unknown, screenshot?: string, url?: string }
 
-export interface TraceStep { tool: string, action: string, thought?: string, url?: string, error?: string }
+export interface TraceStep { tool: string, action: string, thought?: string, url?: string, output?: string, error?: string }
 
 /** the action as the agent issued it: the shell command or the tool call, never the tool's reply */
 export function actionText ({ tool, input }: { tool: string, input: unknown }) {
@@ -35,8 +35,35 @@ export function actionText ({ tool, input }: { tool: string, input: unknown }) {
 export const isBrowserAction = (step: { tool: string }) => !['Skill', 'Read', 'ToolSearch', 'TodoWrite'].includes(step.tool)
 
 const cut = (text: string, max: number) => {
-    const clean = text.trim()
+    const clean = redact(text).trim()
     return clean.length > max ? `${clean.slice(0, max)}…` : clean
+}
+
+/**
+ * Credentials that pages and tools leak into what the agent reads (a site's
+ * map or analytics key in a snapshot, a token in a URL): masked before
+ * anything is published, since step logs are committed and shown on the site.
+ */
+const SECRETS: RegExp[] = [
+    /\b[ps]k\.eyJ[\w-]+\.[\w-]+/g, // Mapbox
+    /\beyJ[\w-]{8,}\.eyJ[\w-]{8,}\.[\w-]+/g, // JWT
+    /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g, // AWS access key id
+    /\bAIza[\w-]{35}/g, // Google API key
+    /\bgh[pousr]_[A-Za-z0-9]{36,}/g, // GitHub
+    /\bgithub_pat_\w{50,}/g,
+    /\bxox[abprs]-[\w-]{10,}/g, // Slack
+    /\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/g, // Stripe
+    /\bsk-(?:ant-|proj-)?[\w-]{20,}/g, // Anthropic, OpenAI
+    /\bhf_[A-Za-z0-9]{30,}/g, // Hugging Face
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
+    /(?<=[?&#](?:access_token|api_key|apikey|token|secret|password|sig|signature)=)[^&#\s"']{8,}/gi
+]
+export const redact = (text: string) => SECRETS.reduce((t, re) => t.replace(re, '[redacted]'), text)
+
+/** the start and the end of a long reply: what the agent read first, and where a log or a snapshot ends */
+const excerpt = (text: string, head: number, tail: number) => {
+    const clean = redact(text).trim()
+    return clean.length > head + tail ? `${clean.slice(0, head).trimEnd()}\n…\n${clean.slice(-tail).trimStart()}` : clean
 }
 
 interface Block { type: string, id?: string, name?: string, input?: unknown, text?: string, tool_use_id?: string, is_error?: boolean, content?: unknown }
@@ -62,11 +89,17 @@ function replyText (content: unknown): string {
 export function traceOf (transcript: Message[], hookSteps: Step[] = []): TraceStep[] {
     const urls = new Map(hookSteps.filter((s) => s.toolUseId && s.url).map((s) => [s.toolUseId!, s.url!]))
     const errors = new Map<string, string>()
+    const outputs = new Map<string, string>()
     for (const message of transcript) {
         if (message.type === 'user') {
             for (const block of blocksOf(message)) {
-                if (block.type === 'tool_result' && block.is_error && block.tool_use_id) {
-                    errors.set(block.tool_use_id, replyText(block.content))
+                if (block.type === 'tool_result' && block.tool_use_id) {
+                    const reply = replyText(block.content)
+                    if (block.is_error) {
+                        errors.set(block.tool_use_id, reply)
+                    } else if (reply.trim()) {
+                        outputs.set(block.tool_use_id, reply)
+                    }
                 }
             }
         }
@@ -87,6 +120,7 @@ export function traceOf (transcript: Message[], hookSteps: Step[] = []): TraceSt
                     action: cut(actionText({ tool: block.name, input: block.input }), 400),
                     ...(thought.trim() && { thought: cut(thought, 400) }),
                     ...(urls.has(id) && { url: cut(urls.get(id)!, 300) }),
+                    ...(outputs.has(id) && { output: excerpt(outputs.get(id)!, 600, 200) }),
                     ...(errors.has(id) && { error: cut(errors.get(id)!, 200) })
                 })
                 thought = ''

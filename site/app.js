@@ -550,12 +550,17 @@ function setRunParam (key) {
     history.replaceState(null, '', url)
 }
 
-/** a step of the published log (src/steps.ts); MCP actions start with the tool name, which the label already shows */
-function stepHtml (step) {
+/**
+ * a step of the published log (src/steps.ts); MCP actions start with the tool name, which the label already shows.
+ * The page URL shows only when it differs from the previous step's, so a run that stays on one page doesn't repeat it.
+ */
+function stepHtml (step, i, steps) {
+    const prevUrl = steps.slice(0, i).findLast((s) => s.url)?.url
     return `<li>
         ${step.thought ? `<p class="thought">${esc(step.thought)}</p>` : ''}
         <div class="action"><span class="tool-name">${esc(step.tool)}</span><code>${esc(step.action.startsWith(`${step.tool} `) ? step.action.slice(step.tool.length + 1) : step.action)}</code></div>
-        ${step.url ? `<div class="url mono">→ ${esc(step.url)}</div>` : ''}
+        ${step.url && step.url !== prevUrl ? `<div class="url mono">→ ${esc(step.url)}</div>` : ''}
+        ${step.output ? `<details class="output"><summary>Output</summary><pre>${esc(step.output)}</pre></details>` : ''}
         ${step.error ? `<div class="step-error">${esc(step.error)}</div>` : ''}
     </li>`
 }

@@ -333,6 +333,9 @@ ol.steps li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
 .steps .tool-name { flex: none; font-size: .72rem; font-weight: 600; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; }
 .steps .action code { background: none; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
 .steps .url { margin-top: 2px; font-size: .78rem; color: var(--muted); overflow-wrap: anywhere; }
+.steps .output { margin-top: 4px; font-size: .78rem; }
+.steps .output summary { color: var(--muted); cursor: pointer; width: fit-content; }
+.steps .output pre { margin: 4px 0 0; padding: 8px 10px; max-height: 320px; overflow: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .steps .step-error { margin-top: 4px; font-size: .8rem; color: var(--bad); white-space: pre-wrap; overflow-wrap: anywhere; }
 .run-links-row { margin: 20px 0 0; color: var(--muted); overflow-wrap: anywhere; }
 .run-dialog .tool .pkg { display: block; }
