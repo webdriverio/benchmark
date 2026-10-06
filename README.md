@@ -173,7 +173,7 @@ The facade always launches a headed browser. In the workflow every job runs unde
 
 Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows a leaderboard of the newest version of each tool that ran every task (pilots on a few tasks are listed but not ranked), success against cost, tokens or time with 95% confidence intervals, success per difficulty and per task, every version with the runs behind it, and a log of all runs. A click on a task result opens the run: what the judge checked and decided, the agent's answer, its tokens, cost and time, and every step it took. Those details are in `runs/<task>.json`, loaded on demand; `robots.txt`, a `noindex` header and a canary string keep them out of search indexes and training data, since they describe tasks of a gated dataset.
 
-Results published before the runner wrote step logs get them from the [Backfill step logs](../../actions/workflows/backfill-steps.yml) workflow, which reads the run's transcripts artifact while it lasts (90 days).
+Results published before the runner wrote step logs get them from the run's transcripts artifact, while it lasts (90 days): `gh run download <workflow run id> -n transcripts -D transcripts/<id>`, then `node src/steps.ts results/<id>`.
 
 It is hosted on Vercel (project `webdriverio-benchmark`), which is connected to this repository and builds every push to `main` with the settings in [`vercel.json`](vercel.json), including the result commits of the Benchmark workflow. To preview locally:
 
@@ -185,7 +185,6 @@ npm run site && npx serve dist
 
 ```
 .github/workflows/benchmark.yml   the benchmark workflow
-.github/workflows/backfill-steps.yml  step logs for results published before them
 vercel.json                       Vercel build settings for benchmark.webdriver.io
 src/run.ts        runner: installs tools, runs the plan, writes runs-*.jsonl and meta-*.json
 src/setups.ts     the seven tool setups
