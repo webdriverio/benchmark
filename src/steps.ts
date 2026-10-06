@@ -35,13 +35,34 @@ export function actionText ({ tool, input }: { tool: string, input: unknown }) {
 export const isBrowserAction = (step: { tool: string }) => !['Skill', 'Read', 'ToolSearch', 'TodoWrite'].includes(step.tool)
 
 const cut = (text: string, max: number) => {
-    const clean = text.trim()
+    const clean = redact(text).trim()
     return clean.length > max ? `${clean.slice(0, max)}…` : clean
 }
 
+/**
+ * Credentials that pages and tools leak into what the agent reads (a site's
+ * map or analytics key in a snapshot, a token in a URL): masked before
+ * anything is published, since step logs are committed and shown on the site.
+ */
+const SECRETS: RegExp[] = [
+    /\b[ps]k\.eyJ[\w-]+\.[\w-]+/g, // Mapbox
+    /\beyJ[\w-]{8,}\.eyJ[\w-]{8,}\.[\w-]+/g, // JWT
+    /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g, // AWS access key id
+    /\bAIza[\w-]{35}/g, // Google API key
+    /\bgh[pousr]_[A-Za-z0-9]{36,}/g, // GitHub
+    /\bgithub_pat_\w{50,}/g,
+    /\bxox[abprs]-[\w-]{10,}/g, // Slack
+    /\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/g, // Stripe
+    /\bsk-(?:ant-|proj-)?[\w-]{20,}/g, // Anthropic, OpenAI
+    /\bhf_[A-Za-z0-9]{30,}/g, // Hugging Face
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
+    /(?<=[?&#](?:access_token|api_key|apikey|token|secret|password|sig|signature)=)[^&#\s"']{8,}/gi
+]
+export const redact = (text: string) => SECRETS.reduce((t, re) => t.replace(re, '[redacted]'), text)
+
 /** the start and the end of a long reply: what the agent read first, and where a log or a snapshot ends */
 const excerpt = (text: string, head: number, tail: number) => {
-    const clean = text.trim()
+    const clean = redact(text).trim()
     return clean.length > head + tail ? `${clean.slice(0, head).trimEnd()}\n…\n${clean.slice(-tail).trimStart()}` : clean
 }
 
