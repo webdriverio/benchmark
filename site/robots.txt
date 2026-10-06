@@ -1,0 +1,4 @@
+# The run details (runs/*.json) are benchmark data: keep them out of search
+# indexes and training crawls. Everything else is fine to crawl.
+User-agent: *
+Disallow: /runs/
