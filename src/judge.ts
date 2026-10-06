@@ -21,6 +21,8 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { parseArgs } from 'node:util'
 
+import { actionText, isBrowserAction, type Step } from './steps.ts'
+
 const exec = promisify(execFile)
 const ROOT = path.resolve(import.meta.dirname, '..')
 
@@ -59,20 +61,6 @@ const { values: args, positionals } = parseArgs({
         workers: { type: 'string', default: '8' }
     }
 })
-
-interface Step { step: number, tool: string, input: unknown, screenshot?: string, url?: string }
-
-/** the action as the agent issued it: the shell command or the tool call, never the tool's reply */
-function actionText ({ tool, input }: Step) {
-    const command = (input as { command?: unknown })?.command
-    if (tool === 'Bash' && typeof command === 'string') {
-        return command
-    }
-    return `${tool.replace(/^mcp__browser__/, '')} ${JSON.stringify(input)}`
-}
-
-/** tool calls that aren't browser actions: loading the skill, reading its docs */
-const isBrowserAction = (step: Step) => !['Skill', 'Read', 'ToolSearch', 'TodoWrite'].includes(step.tool)
 
 async function installWebJudge () {
     const dir = path.join(ROOT, '.tools', `webjudge@${WEBJUDGE_COMMIT.slice(0, 7)}`)

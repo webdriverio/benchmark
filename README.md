@@ -91,7 +91,7 @@ Limitations to keep in mind:
 - **No side doors:** built-in tools are switched off and `WebFetch`/`WebSearch` are denied. The MCP setups get only their MCP tools. The command-line setups (`wdio-session`, `agent-browser`, `playwright-cli`) get `Skill`, `Read` and `Bash` for their own commands only ([`src/permit.ts`](src/permit.ts): every part of a command must be a call of the tool, an `echo`, `true`, a heredoc or `echo` feeding the tool, or a read-only filter on its output; command substitution only of the tool's own commands; no redirects outside the run directory). agent-browser's `install`, `upgrade`, `plugin`, `chat` (which runs a model of its own) and `dashboard` are denied, and so are playwright-cli's `install*`, `show` (a dashboard), `kill-all` (which kills browsers outside the run) and `delete-data`. Every other tool call is denied.
 - **No hints in the prompt:** the prompts don't mention headless or headed browsers or any tool's flags; each tool runs with its own defaults.
 - **Same browser conditions:** every setup asks for a headless local Chrome (Stagehand's facade only runs headed, so every workflow job gets the same virtual display), a fresh working directory per run, and the page state is reset before each run.
-- **Debuggable:** every result row keeps the agent's final message, and the workflow keeps every full transcript as an artifact for 90 days.
+- **Debuggable:** every result row keeps the agent's final message, `steps-*.jsonl` keeps what the agent did step by step (the action it issued, its note before it, the page URL after it, failed and denied calls; [`src/steps.ts`](src/steps.ts)), and the workflow keeps every full transcript with its screenshots as an artifact for 90 days. On the website, a click on a result opens the run.
 - **Same machine, same address:** every setup runs in one job on one GitHub-hosted runner, because websites block by IP address and every runner has its own: in separate jobs one tool could get a clean address and another a blocked one (our first pilot showed exactly that). The runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
 - **Exact versions:** every tool is installed before the first run, so install time never counts, and dist-tags like `latest` are resolved and recorded in the report.
 - **Everything is published:** code, prompts, checks and the raw JSONL of every run.
@@ -123,7 +123,7 @@ Every default is pinned to the version of the published results, so a new run ad
 
 The workflow runs every setup in one job, has WebJudge judge every run, then publishes:
 
-1. writes `results/<date>-run-<id>/` with the raw `runs-*.jsonl`, the merged `meta.json` and a `report.md` (tool versions, configuration, results, every failed run, environment, and a link to the workflow run),
+1. writes `results/<date>-run-<id>/` with the raw `runs-*.jsonl`, the step logs `steps-*.jsonl`, the merged `meta.json` and a `report.md` (tool versions, configuration, results, every failed run, environment, and a link to the workflow run),
 2. updates the [index of all runs](results/README.md) and the **Latest results** section above,
 3. commits and pushes that as `results: <id>`,
 4. waits until Vercel has deployed that commit and [benchmark.webdriver.io](https://benchmark.webdriver.io) serves the new run, and fails otherwise.
@@ -171,7 +171,9 @@ The facade always launches a headed browser. In the workflow every job runs unde
 
 [benchmark.webdriver.io](https://benchmark.webdriver.io) renders every published run. `npm run site` builds it into `dist/`: a static page plus `data.json`, which [`src/site.ts`](src/site.ts) aggregates from `results/`.
 
-Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows a leaderboard of the newest version of each tool that ran every task (pilots on a few tasks are listed but not ranked), success against cost, tokens or time with 95% confidence intervals, success per difficulty and per task, every version with the runs behind it, and a log of all runs.
+Runs are grouped by **setup + package version + model**. Every run of, say, `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward one row, across workflow runs; a new version starts a new row. The page shows a leaderboard of the newest version of each tool that ran every task (pilots on a few tasks are listed but not ranked), success against cost, tokens or time with 95% confidence intervals, success per difficulty and per task, every version with the runs behind it, and a log of all runs. A click on a task result opens the run: what the judge checked and decided, the agent's answer, its tokens, cost and time, and every step it took. Those details are in `runs/<task>.json`, loaded on demand; `robots.txt`, a `noindex` header and a canary string keep them out of search indexes and training data, since they describe tasks of a gated dataset.
+
+Results published before the runner wrote step logs get them from the run's transcripts artifact, while it lasts (90 days): `gh run download <workflow run id> -n transcripts -D transcripts/<id>`, then `node src/steps.ts results/<id>`.
 
 It is hosted on Vercel (project `webdriverio-benchmark`), which is connected to this repository and builds every push to `main` with the settings in [`vercel.json`](vercel.json), including the result commits of the Benchmark workflow. To preview locally:
 
@@ -190,11 +192,12 @@ src/tools.ts      installs and pins the npm package behind each setup
 src/tasks.ts      the tasks as agents get them
 src/mind2web.ts   samples Online-Mind2Web and loads its tasks
 src/judge.ts      runs WebJudge on a result directory
+src/steps.ts      the step log of a run, from its transcript
 src/models.ts     Claude and OpenRouter models, and their prices
 src/report.ts     Markdown tables from run results
 src/publish.ts    report.md, results index and README section for a result directory
 src/site.ts       builds the website into dist/
-site/             the website: index.html, app.js, style.css
+site/             the website: index.html, app.js, style.css, robots.txt
 tasks/            the ids of the sampled tasks
 results/          one directory per benchmark run
 ```

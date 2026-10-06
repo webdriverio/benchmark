@@ -402,8 +402,8 @@ function renderPerTask (rows) {
     const levels = [...new Set(tasks.map(groupOf))].sort((a, b) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b))
     const live = tasks.some((t) => t.kind === 'live')
     $('#tasks-note').textContent = live
-        ? 'Success by the difficulty the dataset assigns, then every task. Online-Mind2Web task texts are gated by their authors, so tasks are listed by id. Hover or tap a cell for details.'
-        : 'Success by kind of task, then every task. Hover or tap a cell for details.'
+        ? 'Success by the difficulty the dataset assigns, then every task. Online-Mind2Web task texts are gated by their authors, so tasks are listed by id. Click a cell for the run: what the judge checked and decided, the agent\'s answer and every step it took.'
+        : 'Success by kind of task, then every task. Click a cell for the run.'
 
     const rate = (g, ids) => {
         const s = ids.map((id) => g.perTask[id]).filter(Boolean)
@@ -436,7 +436,7 @@ function renderPerTask (rows) {
                 }
                 const cls = s.passed === s.runs ? 'pass' : s.passed === 0 ? 'fail' : 'part'
                 const verdict = s.runs === 1 ? (s.passed ? 'passed' : 'failed') : `${s.passed} of ${s.runs} runs passed`
-                return `<td class="c"><i class="cell ${cls}" tabindex="0" aria-label="${esc(`${labelOf(g.setup)}, ${t.id}: ${verdict}`)}" data-tip="${tip(labelOf(g.setup), [t.id, verdict, `${fmt.tokens(s.tokens)} tokens · ${fmt.cost(s.cost)} · ${fmt.seconds(s.seconds)}`])}"></i></td>`
+                return `<td class="c"><button type="button" class="cell ${cls}" data-run="${esc(runKey(t.id, g))}" aria-label="${esc(`${labelOf(g.setup)}, ${t.id}: ${verdict}. Open the run`)}" data-tip="${tip(labelOf(g.setup), [t.id, verdict, `${fmt.tokens(s.tokens)} tokens · ${fmt.cost(s.cost)} · ${fmt.seconds(s.seconds)}`, 'Click for the full run'])}"></button></td>`
             }).join('')}
             <td class="solved">${solved(t)}/${rows.length}</td>
         </tr>`).join('')}`
@@ -488,7 +488,7 @@ function renderByVersion () {
                         <thead><tr><th>Task</th><th class="num">Passed</th><th class="num">Tokens</th><th class="num">Cost</th><th class="num">Time</th><th class="num">Tool calls</th></tr></thead>
                         <tbody>${tasks.map((t) => {
                             const s = g.perTask[t.id]
-                            return `<tr><td class="mono">${esc(t.id)} <span class="tag">${esc(groupOf(t))}</span></td><td class="num">${s.passed}/${s.runs}</td><td class="num">${fmt.tokens(s.tokens)}</td><td class="num">${fmt.cost(s.cost)}</td><td class="num">${fmt.seconds(s.seconds)}</td><td class="num">${fmt.int(s.toolCalls)}</td></tr>`
+                            return `<tr><td><button type="button" class="link mono" data-run="${esc(runKey(t.id, g))}">${esc(t.id)}</button> <span class="tag">${esc(groupOf(t))}</span></td><td class="num">${s.passed}/${s.runs}</td><td class="num">${fmt.tokens(s.tokens)}</td><td class="num">${fmt.cost(s.cost)}</td><td class="num">${fmt.seconds(s.seconds)}</td><td class="num">${fmt.int(s.toolCalls)}</td></tr>`
                         }).join('')}</tbody>
                     </table></div>
                     <h4>Runs behind these numbers</h4>
@@ -522,6 +522,128 @@ function renderRuns (runs) {
             </tr>`).join('')}
         </tbody>`
 }
+
+/* ---------- one run ---------- */
+
+/** a task and a version group, as data-run and the ?run= parameter carry them */
+const runKey = (task, g) => [task, g.setup, g.version].join('~')
+
+const details = new Map()
+/** every run of a task in detail (src/site.ts writes runs/<task>.json) */
+function loadDetails (task) {
+    if (!details.has(task)) {
+        details.set(task, fetch(`runs/${encodeURIComponent(task)}.json`).then((res) => res.ok ? res.json() : { runs: [] }).catch(() => ({ runs: [] })))
+    }
+    return details.get(task)
+}
+
+const dialog = $('#run-dialog')
+const DATASET = 'https://huggingface.co/datasets/osunlp/Online-Mind2Web'
+
+function setRunParam (key) {
+    const url = new URL(location.href)
+    if (key) {
+        url.searchParams.set('run', key)
+    } else {
+        url.searchParams.delete('run')
+    }
+    history.replaceState(null, '', url)
+}
+
+/** a step of the published log (src/steps.ts); MCP actions start with the tool name, which the label already shows */
+function stepHtml (step) {
+    return `<li>
+        ${step.thought ? `<p class="thought">${esc(step.thought)}</p>` : ''}
+        <div class="action"><span class="tool-name">${esc(step.tool)}</span><code>${esc(step.action.startsWith(`${step.tool} `) ? step.action.slice(step.tool.length + 1) : step.action)}</code></div>
+        ${step.url ? `<div class="url mono">→ ${esc(step.url)}</div>` : ''}
+        ${step.error ? `<div class="step-error">${esc(step.error)}</div>` : ''}
+    </li>`
+}
+
+function runHtml (run) {
+    const tokens = run.tokens ?? {}
+    const facts = [
+        ['Tokens', fmt.tokens(tokens.total ?? 0), `in ${fmt.tokens(tokens.input ?? 0)} · out ${fmt.tokens(tokens.output ?? 0)} · cache ${fmt.tokens((tokens.cacheRead ?? 0) + (tokens.cacheCreation ?? 0))}`],
+        ['Cost', fmt.cost(run.costUsd ?? 0)],
+        ['Time', fmt.seconds((run.wallMs ?? 0) / 1000)],
+        ['Turns', run.turns ?? '–'],
+        ['Tool calls', run.toolCalls ?? '–'],
+        ['Screenshots', run.screenshots ?? '–']
+    ]
+    const answer = run.answer ?? run.finalMessage
+    return `
+        ${run.error ? `<p class="run-error">${esc(run.error)}</p>` : ''}
+        <dl class="facts">${facts.map(([k, v, sub]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}${sub ? `<span class="sub">${esc(sub)}</span>` : ''}</dd></div>`).join('')}</dl>
+        ${run.keyPoints ? `<h4>What the judge checked</h4><p class="pre">${esc(run.keyPoints)}</p>` : ''}
+        <h4>The judge's verdict</h4>
+        <p class="pre">${esc((run.judgment ?? '').replace(/^Thoughts:\s*/i, ''))}</p>
+        <h4>${run.answer ? 'The agent\'s answer' : 'The agent\'s last message'}</h4>
+        <p class="pre">${answer ? esc(answer) : '<span class="muted">No answer.</span>'}</p>
+        <h4>Steps${run.steps ? ` <span class="muted">${run.steps.length}</span>` : ''}</h4>
+        ${run.steps?.length
+            ? `<ol class="steps">${run.steps.map(stepHtml).join('')}</ol>`
+            : `<p class="muted">${run.steps ? 'The agent made no tool calls.' : 'No step log was published for this run.'} The full transcript is in the workflow run's <code>transcripts</code> artifact.</p>`}
+        <p class="run-links-row small">
+            ${run.workflowRun ? `<a href="${esc(run.workflowRun)}">Workflow run</a> · ` : ''}
+            <a href="${esc(`${data.repo}/blob/main/results/${run.result}/report.md`)}">Report of ${esc(run.result)}</a> ·
+            <span class="mono muted">${esc(run.runId)}</span>
+        </p>`
+}
+
+async function openRun (key) {
+    const [task, setup, version] = key.split('~')
+    const meta = (data.tasks[state.suite] ?? []).find((t) => t.id === task)
+    const group = data.groups.find((g) => g.suite === state.suite && g.model === state.model && g.setup === setup && g.version === version)
+    if (!meta || !group) {
+        return
+    }
+    const s = group.perTask[task]
+    $('#run-head').innerHTML = `
+        <div class="tool">${swatch(setup)}<span class="name"><strong>${esc(labelOf(setup))}</strong><span class="pkg mono">${esc(group.pkg)}@${esc(group.version)} · ${esc(modelLabel(state.model))}</span></span></div>
+        <h3 id="run-title"><span class="mono">${esc(task)}</span>${meta.level ? `<span class="lvl">${esc(meta.level)}</span>` : ''}${s ? `<span class="verdict ${s.passed === s.runs ? 'pass' : s.passed ? 'part' : 'fail'}">${s.runs === 1 ? (s.passed ? 'passed' : 'failed') : `${s.passed} of ${s.runs} passed`}</span>` : ''}</h3>`
+    $('#run-body').innerHTML = '<p class="muted">Loading…</p>'
+    if (!dialog.open) {
+        dialog.showModal()
+    }
+    setRunParam(key)
+    const file = await loadDetails(task)
+    const runs = file.runs.filter((r) => r.key === `${setup}|${version}|${state.model}`)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt) || a.rep - b.rep)
+    const intro = meta.kind === 'live'
+        ? `<p class="small muted">The task text stays with the dataset, which its authors gate.${file.sourceId ? ` Its id there is <span class="mono">${esc(file.sourceId)}</span> in <a href="${DATASET}">Online-Mind2Web</a>.` : ''} The judge's key points below say what it asks for.</p>`
+        : ''
+    if (!runs.length) {
+        $('#run-body').innerHTML = `${intro}<p class="muted">No details were published for this run.</p>`
+        return
+    }
+    const tabs = runs.length > 1
+        ? `<div class="seg small run-tabs" role="tablist">${runs.map((r, i) => `<button type="button" role="tab" data-i="${i}" aria-selected="${i === 0}">${fmt.date(r.startedAt)}${r.rep > 1 ? ` #${r.rep}` : ''} ${r.pass ? '✓' : '✗'}</button>`).join('')}</div>`
+        : ''
+    $('#run-body').innerHTML = `${intro}${tabs}<div id="run-one">${runHtml(runs[0])}</div>`
+    $('#run-body').querySelector('.run-tabs')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-i]')
+        if (btn) {
+            $('#run-body').querySelectorAll('.run-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b === btn)))
+            $('#run-one').innerHTML = runHtml(runs[Number(btn.dataset.i)])
+        }
+    })
+}
+
+document.addEventListener('click', (e) => {
+    const el = e.target.closest?.('[data-run]')
+    if (el) {
+        tooltip.hidden = true
+        openRun(el.dataset.run)
+    }
+})
+$('#run-close').addEventListener('click', () => dialog.close())
+// a click on the backdrop closes it
+dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+        dialog.close()
+    }
+})
+dialog.addEventListener('close', () => setRunParam())
 
 /* ---------- embed ---------- */
 
@@ -591,6 +713,8 @@ if (!data.runs.length) {
     update()
     if (document.documentElement.dataset.embed) {
         embed()
+    } else if (params.get('run')) {
+        openRun(params.get('run'))
     }
     let width = $('#scatter').clientWidth
     new ResizeObserver(() => {
