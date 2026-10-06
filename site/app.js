@@ -560,6 +560,7 @@ function stepHtml (step, i, steps) {
         ${step.thought ? `<p class="thought">${esc(step.thought)}</p>` : ''}
         <div class="action"><span class="tool-name">${esc(step.tool)}</span><code>${esc(step.action.startsWith(`${step.tool} `) ? step.action.slice(step.tool.length + 1) : step.action)}</code></div>
         ${step.url && step.url !== prevUrl ? `<div class="url mono">→ ${esc(step.url)}</div>` : ''}
+        ${step.output ? `<details class="output"><summary>Output</summary><pre>${esc(step.output)}</pre></details>` : ''}
         ${step.error ? `<div class="step-error">${esc(step.error)}</div>` : ''}
     </li>`
 }
