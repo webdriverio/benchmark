@@ -34,6 +34,8 @@ interface Meta {
     tasks: string[]
     setups: Record<string, SetupMeta>
     workflowRun?: { url: string, id: string, attempt?: string }
+    /** published to <preview>.benchmark.webdriver.io only, not to main */
+    preview?: string
     commit: string
     environment: Record<string, string>
     /** per setup, after merging: every job ran on its own runner */
@@ -52,8 +54,10 @@ async function mergeMeta (dir: string): Promise<Meta> {
             throw new Error('result files disagree on suite, model, runs or seed; they come from different benchmark runs')
         }
     }
+    const preview = process.env.PREVIEW?.trim()
     return {
         ...first,
+        ...(preview && { preview }),
         startedAt: metas.map((m) => m.startedAt).sort()[0],
         finishedAt: metas.map((m) => m.finishedAt ?? '').sort().at(-1) || undefined,
         tasks: [...new Set(metas.flatMap((m) => m.tasks))],
@@ -91,7 +95,7 @@ function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof r
 
     return `# Benchmark run ${id}: ${SUITES[suite].label}
 
-Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.commit.slice(0, 7)}\`](${REPO_URL}/commit/${meta.commit}). Raw data: [\`runs-*.jsonl\`](.) (one line per agent run, including the agent's final message) and [\`meta.json\`](meta.json).${run ? ` Full agent transcripts: the \`transcripts-*\` artifacts of the [workflow run](${run.url}) (kept 90 days).` : ''}
+${meta.preview ? `> [!NOTE]\n> A test run, published only to [${meta.preview}.benchmark.webdriver.io](https://${meta.preview}.benchmark.webdriver.io) (branch \`preview/${meta.preview}\`).\n\n` : ''}Produced by ${runLink} on ${meta.startedAt.slice(0, 10)} from commit [\`${meta.commit.slice(0, 7)}\`](${REPO_URL}/commit/${meta.commit}). Raw data: [\`runs-*.jsonl\`](.) (one line per agent run, including the agent's final message) and [\`meta.json\`](meta.json).${run ? ` Full agent transcripts: the \`transcripts-*\` artifacts of the [workflow run](${run.url}) (kept 90 days).` : ''}
 
 ## Configuration
 

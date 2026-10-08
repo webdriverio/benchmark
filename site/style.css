@@ -282,6 +282,14 @@ details[open] .chev { transform: rotate(90deg); }
 .version-detail table.data { border: 1px solid var(--border); border-radius: 8px; }
 .tag { display: inline-block; font-size: .7rem; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); margin-left: 8px; font-family: var(--sans); vertical-align: 1px; }
 .tag.latest { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+.tag.preview { background: #7c3aed1f; color: #7c3aed; border-color: transparent; font-weight: 600; }
+
+/* a preview/<name> build: test runs, not the published benchmark */
+.preview-banner { background: #7c3aed; color: #fff; font-size: .9rem; padding: 10px 0; }
+.preview-banner .wrap { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.preview-banner a { color: inherit; text-decoration: underline; }
+.preview-banner .tag.preview { background: #ffffff33; color: #fff; margin-left: 0; }
+[data-embed] .preview-banner { display: none; }
 .rate { font-weight: 600; }
 .rate .ci { font-weight: 400; color: var(--muted); font-size: .78rem; margin-left: 4px; }
 .run-links { margin: 0; padding-left: 18px; font-size: .86rem; }

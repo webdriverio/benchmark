@@ -4,6 +4,11 @@ name: Benchmark
 # decide success, then publishes results/<date>-run-<id>/ (raw data, meta.json, report.md),
 # the results index and the README's "Latest results" section.
 #
+# Without a preview name it publishes to main, which Vercel deploys to
+# benchmark.webdriver.io. With one, e.g. `try-new-prompt`, it publishes to the
+# branch preview/try-new-prompt instead (main plus every run published under
+# that name) and serves it at try-new-prompt.benchmark.webdriver.io.
+#
 # Versions accept anything npm does: an exact version, a dist-tag
 # (latest, next) or a range. The report records the exact version that ran.
 
@@ -48,10 +53,15 @@ on:
       concurrency:
         description: Runs at the same time (every setup runs in one job)
         default: '4'
-      publish:
-        description: Commit the results to the repository
-        type: boolean
-        default: true
+      preview:
+        description: 'Publish to <preview>.benchmark.webdriver.io (branch preview/<preview>) instead of benchmark.webdriver.io; empty = production'
+        default: ''
+
+env:
+  # the Vercel project behind benchmark.webdriver.io, for preview domains
+  VERCEL_PROJECT_ID: prj_r2NPac1QhyuvyoCBpzrPJ9jXBnvy
+  VERCEL_TEAM_ID: team_2ZKoXr3JIX7pHhxkN8qZKeQT
+  PREVIEW_DOMAIN: benchmark.webdriver.io
 
 concurrency:
   group: benchmark
@@ -67,6 +77,9 @@ jobs:
     outputs:
       setups: ${{ steps.plan.outputs.setups }}
       result-id: ${{ steps.plan.outputs.result-id }}
+      preview: ${{ steps.target.outputs.preview }}
+      branch: ${{ steps.target.outputs.branch }}
+      host: ${{ steps.target.outputs.host }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -81,6 +94,24 @@ jobs:
           setups=$(node src/plan.ts "$SETUPS")
           echo "setups=$setups" >> "$GITHUB_OUTPUT"
           echo "result-id=$(date -u +%Y-%m-%d)-run-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+      - id: target
+        # where the results go; checked here so a bad name fails before hours of runs
+        env:
+          PREVIEW: ${{ inputs.preview }}
+        run: |
+          name=$(echo "$PREVIEW" | tr '[:upper:]' '[:lower:]' | xargs)
+          if [ -z "$name" ]; then
+            echo "branch=main" >> "$GITHUB_OUTPUT"
+            echo "host=$PREVIEW_DOMAIN" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$name" =~ ^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$ ]] || [ "$name" = www ]; then
+            echo "::error::preview \"$PREVIEW\" is not a valid subdomain: up to 40 lowercase letters, digits and dashes, not starting or ending with a dash"
+            exit 1
+          fi
+          echo "preview=$name" >> "$GITHUB_OUTPUT"
+          echo "branch=preview/$name" >> "$GITHUB_OUTPUT"
+          echo "host=$name.$PREVIEW_DOMAIN" >> "$GITHUB_OUTPUT"
 
   bench:
     # every setup in this one job, so all share one IP address (see src/plan.ts)
@@ -169,15 +200,51 @@ jobs:
         run: |
           node src/publish.ts "results/$RESULT_ID"
           cat "results/$RESULT_ID/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Point the preview domain at its branch
+        # Vercel's Git integration builds every branch; a project domain with a
+        # git branch serves that branch's newest deployment. Set up before the
+        # push, so the push's deployment gets the domain right away.
+        if: ${{ needs.plan.outputs.preview }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          BRANCH: ${{ needs.plan.outputs.branch }}
+          HOST: ${{ needs.plan.outputs.host }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::publishing a preview needs the VERCEL_TOKEN repository secret"
+            exit 1
+          fi
+          api="https://api.vercel.com"
+          auth="Authorization: Bearer $VERCEL_TOKEN"
+          q="teamId=$VERCEL_TEAM_ID"
+          current=$(curl -sS -H "$auth" "$api/v9/projects/$VERCEL_PROJECT_ID/domains/$HOST?$q")
+          if echo "$current" | jq -e '.name' > /dev/null; then
+            if [ "$(echo "$current" | jq -r '.gitBranch // ""')" != "$BRANCH" ]; then
+              curl -sS --fail-with-body -X PATCH -H "$auth" -H 'Content-Type: application/json' \
+                -d "$(jq -n --arg b "$BRANCH" '{gitBranch: $b}')" \
+                "$api/v9/projects/$VERCEL_PROJECT_ID/domains/$HOST?$q" > /dev/null
+            fi
+          else
+            curl -sS --fail-with-body -X POST -H "$auth" -H 'Content-Type: application/json' \
+              -d "$(jq -n --arg n "$HOST" --arg b "$BRANCH" '{name: $n, gitBranch: $b}')" \
+              "$api/v10/projects/$VERCEL_PROJECT_ID/domains?$q" > /dev/null
+          fi
+          echo "$HOST serves $BRANCH"
       - name: Commit results
-        if: ${{ inputs.publish }}
         env:
           RESULT_ID: ${{ needs.plan.outputs.result-id }}
+          PREVIEW: ${{ needs.plan.outputs.preview }}
+          BRANCH: ${{ needs.plan.outputs.branch }}
         # README.md and results/README.md are generated from every published
         # run, so anything pushed to main while this run was going (another
         # run's results, a README edit) conflicts with a plain rebase. Instead,
         # start each attempt from the current main, put this run's raw results
         # back and regenerate the derived files there, then push.
+        #
+        # A preview branch is rebuilt the same way on every publish: the
+        # current main, plus the runs published earlier under the same name,
+        # plus this one, force-pushed. So a preview always shows its test runs
+        # next to the current production results.
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -191,26 +258,37 @@ jobs:
               npm ci
               lock=$(sha256sum package-lock.json)
             fi
+            if [ "$BRANCH" != main ] && git fetch --depth=1 origin "$BRANCH"; then
+              for dir in $(git ls-tree -d --name-only FETCH_HEAD results/); do
+                [ -e "$dir" ] || git checkout FETCH_HEAD -- "$dir"
+              done
+            fi
             rm -rf "results/$RESULT_ID"
             cp -R "$saved" "results/$RESULT_ID"
             node src/publish.ts "results/$RESULT_ID"
             git add results README.md
-            if git diff --cached --quiet; then
+            if [ "$BRANCH" = main ] && git diff --cached --quiet; then
               echo "results/$RESULT_ID is already published on main"
               exit 0
             fi
-            git commit -m "results: $RESULT_ID" -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            git push origin HEAD:main && exit 0
+            git commit -m "results: $RESULT_ID${PREVIEW:+ (preview $PREVIEW)}" -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [ "$BRANCH" = main ]; then
+              git push origin HEAD:main && exit 0
+            else
+              git push --force origin "HEAD:refs/heads/$BRANCH" && exit 0
+            fi
             sleep $((attempt * 10))
           done
           exit 1
-      - name: Wait for benchmark.webdriver.io
-        # Vercel's Git integration deploys every push to main; make sure this
-        # run's commit was deployed and the live site serves its results
-        if: ${{ inputs.publish }}
+      - name: Wait for the website
+        # Vercel's Git integration deploys every push; make sure this run's
+        # commit was deployed and the site serves its results
         env:
           GH_TOKEN: ${{ github.token }}
           RESULT_ID: ${{ needs.plan.outputs.result-id }}
+          HOST: ${{ needs.plan.outputs.host }}
+          # only needed if Vercel's deployment protection covers preview domains
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           sha=$(git rev-parse HEAD)
           for _ in $(seq 1 90); do
@@ -219,16 +297,11 @@ jobs:
               echo "::error::Vercel could not deploy $sha"
               exit 1
             fi
-            if [ "$state" = "success" ] && curl -fsS "https://benchmark.webdriver.io/data.json?ts=$(date +%s)" | grep -q "\"$RESULT_ID\""; then
-              echo "Live on [benchmark.webdriver.io](https://benchmark.webdriver.io) (commit \`${sha:0:7}\`)." >> "$GITHUB_STEP_SUMMARY"
+            if [ "$state" = "success" ] && curl -fsS ${BYPASS:+-H "x-vercel-protection-bypass: $BYPASS"} "https://$HOST/data.json?ts=$(date +%s)" | grep -q "\"$RESULT_ID\""; then
+              echo "Live on [$HOST](https://$HOST) (commit \`${sha:0:7}\`)." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::benchmark.webdriver.io does not show $RESULT_ID 15 minutes after the push"
+          echo "::error::$HOST does not show $RESULT_ID 15 minutes after the push"
           exit 1
-      - uses: actions/upload-artifact@v4
-        if: ${{ !inputs.publish }}
-        with:
-          name: report
-          path: results/${{ needs.plan.outputs.result-id }}
