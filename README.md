@@ -106,8 +106,8 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 
 | Input | Default | What it does |
 |---|---|---|
-| `webdriverio` | `10.0.0-alpha.175` | `@wdio/cli` version for `wdio-session` (v10 and up; `latest` is still v9, which has no `wdio session`) |
-| `wdio-mcp` | `4.0.0-dev.64` | `@wdio/mcp` version |
+| `webdriverio` | `latest` | `@wdio/cli` version for `wdio-session` (v10 and up) |
+| `wdio-mcp` | `latest` | `@wdio/mcp` version |
 | `playwright-mcp` | `0.0.83` | `@playwright/mcp` version, for both Playwright setups |
 | `agent-browser` | `0.38.2` | `agent-browser` version |
 | `playwright-cli` | `0.1.22` | `@playwright/cli` version |
@@ -145,7 +145,7 @@ node src/publish.ts results/<id>                   # report.md, results index, R
 
 `node src/mind2web.ts sample` picks the 100 tasks again (same seed, same sample; a larger `--size` keeps every task of a smaller one) and writes `tasks/online-mind2web.json`.
 
-Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `PLAYWRIGHT_CLI_VERSION`, `AGENT_BROWSER_VERSION` and `STAGEHAND_REF` (default `latest`, except `WDIO_VERSION` and `WDIO_MCP_VERSION`: `wdio session` ships with v10, and `@wdio/mcp` 4 is still a dev build; see the workflow inputs above for the current defaults). To test an unreleased WebdriverIO:
+Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `PLAYWRIGHT_CLI_VERSION`, `AGENT_BROWSER_VERSION` and `STAGEHAND_REF` (default `latest`). To test an unreleased WebdriverIO:
 
 ```sh
 export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio

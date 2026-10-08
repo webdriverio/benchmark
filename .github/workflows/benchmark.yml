@@ -11,11 +11,11 @@ on:
   workflow_dispatch:
     inputs:
       webdriverio:
-        description: '@wdio/cli version for wdio session (v10 and up; latest is still v9, which has no wdio session)'
-        default: 10.0.0-alpha.175
+        description: '@wdio/cli version for wdio session (v10 and up)'
+        default: latest
       wdio-mcp:
         description: '@wdio/mcp version'
-        default: 4.0.0-dev.64
+        default: latest
       playwright-mcp:
         description: '@playwright/mcp version'
         default: 0.0.83
