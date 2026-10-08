@@ -119,7 +119,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `concurrency` | `4` | runs at the same time |
 | `publish` | on | commit the results to this repository |
 
-Every default is pinned to the version of the published results, so a new run adds to their rows instead of starting new ones. npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
+The WebdriverIO setups default to `latest`; every other default is pinned to the version of the published results, so a new run adds to their rows instead of starting new ones. npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
 
 The workflow runs every setup in one job, has WebJudge judge every run, then publishes:
 
