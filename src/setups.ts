@@ -225,8 +225,7 @@ export const SETUPS: Setup[] = [
     {
         id: 'wdio-session',
         label: 'WebdriverIO session',
-        // `next` is the newest v10 prerelease, where `wdio session` changes land before a stable release
-        tool: { pkg: '@wdio/cli', env: 'WDIO_VERSION', bin: 'wdio', defaultVersion: 'next' },
+        tool: { pkg: '@wdio/cli', env: 'WDIO_VERSION', bin: 'wdio' },
         local: () => process.env.WDIO_LOCAL
             ? { pkg: '@wdio/cli', version: 'local build', binPath: path.join(process.env.WDIO_LOCAL, 'packages', 'wdio-cli', 'bin', 'wdio.js') }
             : undefined,
