@@ -76,6 +76,17 @@ function compareVersions (a, b) {
 }
 
 const data = await (await fetch('data.json', { cache: 'no-store' })).json()
+const REF = data.ref ?? 'main'
+
+/* a preview/<name> branch, served at <name>.benchmark.webdriver.io: test runs next to the published ones */
+if (data.preview) {
+    const banner = $('#preview-banner')
+    const tests = data.runs.filter((r) => r.preview).length
+    banner.innerHTML = `<div class="wrap"><strong>Preview: ${esc(data.preview)}</strong> <span>The published results plus ${tests} test run${tests === 1 ? '' : 's'} (marked <span class="tag preview">preview</span>) from branch <a class="mono" href="${esc(`${data.repo}/tree/${REF}`)}">${esc(REF)}</a>. Not part of the benchmark: <a href="https://benchmark.webdriver.io">benchmark.webdriver.io</a>.</span></div>`
+    banner.hidden = false
+    document.title = `[${data.preview}] ${document.title}`
+}
+const previewTag = (run) => run?.preview ? ' <span class="tag preview">preview</span>' : ''
 
 /**
  * Two setups can share a label (Playwright MCP with and without flags); the
@@ -456,7 +467,7 @@ function runLinks (ids) {
             return ''
         }
         const workflow = run.workflowRun ? ` · <a href="${esc(run.workflowRun.url)}">workflow #${esc(run.workflowRun.id)}</a>` : ''
-        return `<li><a href="${esc(run.report)}">${esc(id)}</a>${workflow}</li>`
+        return `<li><a href="${esc(run.report)}">${esc(id)}</a>${previewTag(run)}${workflow}</li>`
     }).join('')}</ul>`
 }
 
@@ -513,7 +524,7 @@ function renderRuns (runs) {
         <tbody>${runs.map((run) => `
             <tr>
                 <td class="nowrap">${fmt.date(run.startedAt)}</td>
-                <td class="nowrap"><a class="mono" href="${esc(run.report)}">${esc(run.id)}</a></td>
+                <td class="nowrap"><a class="mono" href="${esc(run.report)}">${esc(run.id)}</a>${previewTag(run)}</td>
                 <td><div class="chips">${Object.entries(run.setups).map(([setup, s]) => s.skipped
                     ? `<span class="chip skipped" data-tip="${tip(labelOf(setup), [`skipped: ${s.skipped}`])}">${esc(labelOf(setup))}</span>`
                     : `<span class="chip" data-tip="${tip(`${labelOf(setup)} ${s.version}`, [`${s.passed}/${s.runs} passed · ${fmt.tokens(s.tokens)} tokens · ${fmt.cost(s.cost)}`])}">${swatch(setup)}${esc(labelOf(setup))} <b>${fmt.pct(s.successRate)}</b></span>`).join('')}</div></td>
@@ -590,7 +601,7 @@ function runHtml (run) {
             : `<p class="muted">${run.steps ? 'The agent made no tool calls.' : 'No step log was published for this run.'} The full transcript is in the workflow run's <code>transcripts</code> artifact.</p>`}
         <p class="run-links-row small">
             ${run.workflowRun ? `<a href="${esc(run.workflowRun)}">Workflow run</a> · ` : ''}
-            <a href="${esc(`${data.repo}/blob/main/results/${run.result}/report.md`)}">Report of ${esc(run.result)}</a> ·
+            <a href="${esc(`${data.repo}/blob/${REF}/results/${run.result}/report.md`)}">Report of ${esc(run.result)}</a>${previewTag(data.runs.find((r) => r.id === run.result))} ·
             <span class="mono muted">${esc(run.runId)}</span>
         </p>`
 }

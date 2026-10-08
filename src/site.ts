@@ -10,6 +10,10 @@
  * Online-Mind2Web run of `@wdio/cli@10.0.0` with `claude-sonnet-5` counts toward
  * one row, no matter which workflow run produced it. A new tool version
  * starts a new row, and suites never mix.
+ *
+ * On Vercel, a build of a preview/<name> branch (served at
+ * <name>.benchmark.webdriver.io) is marked as a preview: the page says so,
+ * links go to that branch, and robots.txt keeps the whole site out of search.
  */
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -26,6 +30,9 @@ const REPO = 'https://github.com/webdriverio/benchmark'
 
 const { values: args } = parseArgs({ options: { out: { type: 'string', default: 'dist' } } })
 const OUT = path.resolve(ROOT, args.out)
+/** the branch being built: Vercel sets VERCEL_GIT_COMMIT_REF, PREVIEW_BRANCH is for local builds */
+const REF = process.env.PREVIEW_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || 'main'
+const PREVIEW = REF.startsWith('preview/') ? REF.slice('preview/'.length) : undefined
 
 interface SetupMeta { pkg: string, version?: string, skipped?: string }
 interface Meta {
@@ -39,6 +46,7 @@ interface Meta {
     setups: Record<string, SetupMeta>
     workflowRun?: { url: string, id: string }
     commit: string
+    preview?: string
 }
 
 /** 95% Wilson score interval of a success rate: how far it could move by chance */
@@ -148,6 +156,8 @@ function tasksBySuite () {
 const data = {
     generatedAt: new Date().toISOString(),
     repo: REPO,
+    ref: REF,
+    ...(PREVIEW && { preview: PREVIEW }),
     setups: SETUPS.map((s) => 'repo' in s.tool
         ? { id: s.id, label: s.label, pkg: s.tool.repo, link: `https://github.com/${s.tool.repo}` }
         : { id: s.id, label: s.label, pkg: s.tool.pkg, link: `https://www.npmjs.com/package/${s.tool.pkg}` }),
@@ -175,7 +185,8 @@ const data = {
         runsPerTask: meta.runsPerTask,
         workflowRun: meta.workflowRun,
         commit: meta.commit,
-        report: `${REPO}/blob/main/results/${id}/report.md`,
+        ...(meta.preview && { preview: meta.preview }),
+        report: `${REPO}/blob/${REF}/results/${id}/report.md`,
         setups: Object.fromEntries(Object.entries(meta.setups).map(([setup, s]) => [setup, s.skipped
             ? { pkg: s.pkg, skipped: s.skipped }
             : { pkg: s.pkg, version: s.version, ...stats(rows.filter((r) => r.setup === setup)) }]))
@@ -185,6 +196,10 @@ const data = {
 await fs.rm(OUT, { recursive: true, force: true })
 await fs.cp(path.join(ROOT, 'site'), OUT, { recursive: true })
 await fs.writeFile(path.join(OUT, 'data.json'), JSON.stringify(data))
+if (PREVIEW) {
+    // test results: nothing on a preview domain belongs in a search index
+    await fs.writeFile(path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n')
+}
 
 // the dataset's own task id, for people with access to it
 const sourceIds = new Map<string, string>()

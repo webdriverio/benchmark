@@ -117,7 +117,7 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
 | `seed` | `1` | seed for the run order |
 | `concurrency` | `4` | runs at the same time |
-| `publish` | on | commit the results to this repository |
+| `preview` | empty | publish to `<preview>.benchmark.webdriver.io` instead of production (see [Test runs](#test-runs)) |
 
 Every default is pinned to the version of the published results, so a new run adds to their rows instead of starting new ones. npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
 
@@ -125,10 +125,26 @@ The workflow runs every setup in one job, has WebJudge judge every run, then pub
 
 1. writes `results/<date>-run-<id>/` with the raw `runs-*.jsonl`, the step logs `steps-*.jsonl`, the merged `meta.json` and a `report.md` (tool versions, configuration, results, every failed run, environment, and a link to the workflow run),
 2. updates the [index of all runs](results/README.md) and the **Latest results** section above,
-3. commits and pushes that as `results: <id>`,
-4. waits until Vercel has deployed that commit and [benchmark.webdriver.io](https://benchmark.webdriver.io) serves the new run, and fails otherwise.
+3. commits and pushes that as `results: <id>` to `main` (or to `preview/<name>`, see below),
+4. waits until Vercel has deployed that commit and [benchmark.webdriver.io](https://benchmark.webdriver.io) (or the preview domain) serves the new run, and fails otherwise.
 
 The report also appears on the workflow run's summary page. The workflow needs the `ANTHROPIC_API_KEY`, `HF_TOKEN` (dataset terms accepted) and `OPENAI_API_KEY` (for the judge) repository secrets.
+
+#### Test runs
+
+To try something without touching the published results, give the run a `preview` name, e.g. `new-prompt`. Everything runs and is judged the same way, but the results go to the branch `preview/new-prompt` instead of `main`, and the site built from that branch is served at [new-prompt.benchmark.webdriver.io](https://new-prompt.benchmark.webdriver.io):
+
+- the branch is rebuilt on every publish from the current `main`, the runs published earlier under the same name and the new run, then force-pushed, so a preview always shows its test runs next to the current production results;
+- the page has a banner saying it is a preview, test runs are marked `preview` in the run log, their `report.md` says so, and `robots.txt` keeps the whole preview out of search indexes;
+- a name is a DNS label: up to 40 lowercase letters, digits and dashes. The workflow checks it before any run starts.
+
+The workflow points `<name>.benchmark.webdriver.io` at the branch through the Vercel API before it pushes. That needs, once:
+
+- a wildcard DNS record `*.benchmark.webdriver.io CNAME cname.vercel-dns.com` (webdriver.io's DNS is on Route 53, not Vercel, so every preview domain is added to the project by name and gets its own certificate),
+- the `VERCEL_TOKEN` repository secret: a Vercel token with access to the `webdriverio-benchmark` project,
+- either deployment protection off for preview deployments, so anyone with the link can see a preview, or the `VERCEL_AUTOMATION_BYPASS_SECRET` repository secret (Protection Bypass for Automation), so the workflow can check the preview while viewers sign in to Vercel.
+
+To drop a preview, delete its branch and remove its domain from the Vercel project. To publish a test run for real, run it again without a `preview` name.
 
 ### Locally
 
@@ -175,10 +191,11 @@ Runs are grouped by **setup + package version + model**. Every run of, say, `@wd
 
 Results published before the runner wrote step logs get them from the run's transcripts artifact, while it lasts (90 days): `gh run download <workflow run id> -n transcripts -D transcripts/<id>`, then `node src/steps.ts results/<id>`.
 
-It is hosted on Vercel (project `webdriverio-benchmark`), which is connected to this repository and builds every push to `main` with the settings in [`vercel.json`](vercel.json), including the result commits of the Benchmark workflow. To preview locally:
+It is hosted on Vercel (project `webdriverio-benchmark`), which is connected to this repository and builds every push to `main` with the settings in [`vercel.json`](vercel.json), including the result commits of the Benchmark workflow. Pushes to `preview/<name>` branches build [test runs](#test-runs) for `<name>.benchmark.webdriver.io`. To preview locally:
 
 ```sh
 npm run site && npx serve dist
+PREVIEW_BRANCH=preview/<name> npm run site   # build it as the preview of that branch
 ```
 
 ## Layout
