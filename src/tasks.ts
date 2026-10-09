@@ -53,6 +53,11 @@ export function parseAnswer (text: string): unknown {
     }
 }
 
+/** our id for an Online-Mind2Web task */
+export function mind2webId (taskId: string) {
+    return `om2w-${taskId.slice(0, 8)}`
+}
+
 /**
  * Online-Mind2Web tasks, as an agent gets them here. The benchmark's own
  * agents receive the task and the website; the rule against signing in or
@@ -68,7 +73,7 @@ async function mind2webTasks (): Promise<Task[]> {
             throw new Error(`Online-Mind2Web task ${taskId} is not in the dataset revision ${sample.revision}`)
         }
         return {
-            id: `om2w-${taskId.slice(0, 8)}`,
+            id: mind2webId(taskId),
             kind: 'live' as const,
             level: task.level,
             sourceId: taskId,

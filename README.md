@@ -92,7 +92,7 @@ Limitations to keep in mind:
 - **No hints in the prompt:** the prompts don't mention headless or headed browsers or any tool's flags; each tool runs with its own defaults.
 - **Same browser conditions:** every setup asks for a headless local Chrome (Stagehand's facade only runs headed, so every workflow job gets the same virtual display), a fresh working directory per run, and the page state is reset before each run.
 - **Debuggable:** every result row keeps the agent's final message, `steps-*.jsonl` keeps what the agent did step by step (the action it issued, its note before it, the page URL after it, failed and denied calls; [`src/steps.ts`](src/steps.ts)), and the workflow keeps every full transcript with its screenshots as an artifact for 90 days. On the website, a click on a result opens the run.
-- **Same machine, same address:** every setup runs in one job on one GitHub-hosted runner, because websites block by IP address and every runner has its own: in separate jobs one tool could get a clean address and another a blocked one (our first pilot showed exactly that). The runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
+- **Same machine, same address:** all setups run a task on the same GitHub-hosted runner, because websites block by IP address and every runner has its own: with a job per tool, one tool could get a clean address and another a blocked one (our first pilot showed exactly that). The workflow splits the *tasks* into shards, one job each, and every job runs every setup on its tasks, interleaved in one shuffled order ([`src/plan.ts`](src/plan.ts)). A site that blocks a runner blocks every tool on that task alike. The runs are shuffled with a fixed seed (`--seed`), so a run can be reproduced.
 - **Exact versions:** every tool is installed before the first run, so install time never counts, and dist-tags like `latest` are resolved and recorded in the report.
 - **Everything is published:** code, prompts, checks and the raw JSONL of every run.
 
@@ -116,12 +116,13 @@ Start the [Benchmark workflow](../../actions/workflows/benchmark.yml) with **Run
 | `runs` | `1` | runs per task and setup |
 | `setups`, `tasks` | `all` | comma-separated ids to run a subset |
 | `seed` | `1` | seed for the run order |
-| `concurrency` | `4` | runs at the same time |
+| `shards` | `10` | jobs to split the tasks into, each on its own runner; every job runs every setup on its tasks |
+| `concurrency` | `4` | runs at the same time in each job |
 | `publish` | on | commit the results to this repository |
 
 Every default is pinned to the version of the published results, so a new run adds to their rows instead of starting new ones. npm versions accept an exact version, a dist-tag (`latest`, `next`) or a range. A setup whose tool can't be installed is skipped, and the report says why.
 
-The workflow runs every setup in one job, has WebJudge judge every run, then publishes:
+The workflow splits the tasks into `shards` jobs, each running every setup on its tasks and having WebJudge judge them, then publishes:
 
 1. writes `results/<date>-run-<id>/` with the raw `runs-*.jsonl`, the step logs `steps-*.jsonl`, the merged `meta.json` and a `report.md` (tool versions, configuration, results, every failed run, environment, and a link to the workflow run),
 2. updates the [index of all runs](results/README.md) and the **Latest results** section above,
@@ -151,9 +152,9 @@ Pick versions with `WDIO_VERSION`, `WDIO_MCP_VERSION`, `PLAYWRIGHT_MCP_VERSION`,
 export WDIO_LOCAL=/path/to/webdriverio   # a built checkout of webdriverio/webdriverio
 ```
 
-Runner options: `--setups`, `--tasks`, `--runs` (default 1), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10), `--concurrency` (default 1; parallel browsers compete for CPU, which shows in the time per task), `--screenshots` (always on: WebJudge decides from them).
+Runner options: `--setups`, `--tasks`, `--runs` (default 1), `--model` (default `claude-sonnet-5`), `--seed`, `--out-dir`, `--max-turns` (default 80), `--timeout-min` (default 10), `--concurrency` (default 1; parallel browsers compete for CPU, which shows in the time per task), `--screenshots` (always on: WebJudge decides from them), `--shard` (names the files and runs of one job of a sharded run), `--deadline-min` (start no run after that many minutes; the report counts the runs that didn't start).
 
-A full run is 700 agent runs. 350 take four to five hours at concurrency 4, and a GitHub job stops after six, so in the workflow a full run is two runs with 50 task ids each (`tasks`). Runs of the same tool versions and model count toward one row on the website.
+A full run is 700 agent runs, about 25 hours of agent time with Claude Sonnet 5 and 40 with DeepSeek V4.1 Flash. In ten shards at concurrency 4 that's 40 to 60 minutes per job. A GitHub job stops after six hours, so each job starts no run after five and keeps whatever finished. Runs of the same tool versions and model count toward one row on the website.
 
 ### Stagehand
 
