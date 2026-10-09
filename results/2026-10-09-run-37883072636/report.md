@@ -11,10 +11,10 @@ Produced by [workflow run #37883072636](https://github.com/webdriverio/benchmark
 | Runs | 1 per task and setup, shuffled with seed 1 |
 | Limits | 80 turns, 10 min per run |
 | Suite | Online-Mind2Web: A fixed random sample of Online-Mind2Web, an independent benchmark of 300 tasks on live websites, judged by its own WebJudge. |
-| Tasks | 90 tasks sampled from Online-Mind2Web (ids in [`tasks/online-mind2web.json`](https://github.com/webdriverio/benchmark/blob/main/tasks/online-mind2web.json)); live websites, so runs are not exactly repeatable |
+| Tasks | 100 tasks sampled from Online-Mind2Web (ids in [`tasks/online-mind2web.json`](https://github.com/webdriverio/benchmark/blob/main/tasks/online-mind2web.json)); live websites, so runs are not exactly repeatable |
 | Success decided by | WebJudge (`o4-mini`, score threshold 3, [Online-Mind2Web@f0d805e](https://github.com/OSU-NLP-Group/Online-Mind2Web/tree/f0d805ee0e9e0b3ea70911e45e5264b72968f3dc); patched: reasoning models: max_completion_tokens=8192 instead of max_tokens=512, no temperature). Its reasoning per run: `judgments-*.jsonl` |
 | Screenshots | after every tool call, taken by the harness over CDP (no agent tokens) |
-| Duration | 76 min |
+| Duration | 171 min |
 
 How the tasks, setups and checks work, and what we do to keep the comparison fair: [README](https://github.com/webdriverio/benchmark#keeping-it-fair).
 
@@ -34,13 +34,13 @@ How the tasks, setups and checks work, and what we do to keep the comparison fai
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| `playwright-mcp`<br>@playwright/mcp@0.0.83 | 589k | $0.026 | 48% (43/90) | 106 s | 27.5 |
-| `playwright-mcp-tuned`<br>@playwright/mcp@0.0.83 | 574k | $0.029 | 50% (45/90) | 93 s | 27 |
-| `stagehand`<br>browserbase/stagehand@4.1.0+cd7b230 | 412k | $0.022 | 58% (52/90) | 91 s | 22 |
-| `wdio-mcp`<br>@wdio/mcp@4.0.0 | 347k | $0.017 | 56% (50/90) | 113 s | 32 |
-| `wdio-session`<br>@wdio/cli@10.0.2 | 167k | $0.010 | 59% (53/90) | 146 s | 26.5 |
-| `agent-browser`<br>agent-browser@0.38.2 | 729k | $0.034 | 50% (45/90) | 141 s | 36 |
-| `playwright-cli`<br>@playwright/cli@0.1.22 | 658k | $0.028 | 60% (54/90) | 149 s | 33 |
+| `playwright-mcp`<br>@playwright/mcp@0.0.83 | 652k | $0.028 | 48% (48/100) | 123 s | 28 |
+| `playwright-mcp-tuned`<br>@playwright/mcp@0.0.83 | 574k | $0.029 | 50% (50/100) | 106 s | 27.5 |
+| `stagehand`<br>browserbase/stagehand@4.1.0+cd7b230 | 354k | $0.022 | 56% (56/100) | 91 s | 22 |
+| `wdio-mcp`<br>@wdio/mcp@4.0.0 | 340k | $0.016 | 54% (54/100) | 114 s | 32 |
+| `wdio-session`<br>@wdio/cli@10.0.2 | 168k | $0.010 | 58% (58/100) | 150 s | 26.5 |
+| `agent-browser`<br>agent-browser@0.38.2 | 735k | $0.036 | 50% (50/100) | 157 s | 36.5 |
+| `playwright-cli`<br>@playwright/cli@0.1.22 | 641k | $0.029 | 57% (57/100) | 149 s | 33 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
@@ -128,6 +128,16 @@ _Medians per run, except success. Tokens include cache reads and writes._
 | om2w-84f806c7 | 0/1 · 2203k · 219s | 1/1 · 673k · 151s | 0/1 · 621k · 189s | 1/1 · 933k · 146s | 1/1 · 368k · 104s | 0/1 · 2553k · 316s | 0/1 · 2001k · 221s |
 | om2w-7072d094 | 1/1 · 541k · 88s | 1/1 · 794k · 88s | 0/1 · 603k · 80s | 1/1 · 500k · 97s | 1/1 · 242k · 99s | 1/1 · 316k · 57s | 0/1 · 628k · 63s |
 | om2w-b64f938a | 0/1 · 4366k · 469s | 0/1 · 3632k · 463s | 0/1 · 1920k · 326s | 0/1 · 2141k · 406s | 0/1 · 1033k · 337s | 0/1 · 2824k · 389s | 0/1 · 0k · 600s |
+| om2w-56f8890a | 1/1 · 384k · 93s | 1/1 · 81k · 32s | 1/1 · 127k · 34s | 1/1 · 90k · 70s | 1/1 · 65k · 78s | 1/1 · 1387k · 206s | 1/1 · 188k · 85s |
+| om2w-da8f3823 | 0/1 · 868k · 197s | 1/1 · 760k · 197s | 0/1 · 552k · 222s | 0/1 · 133k · 36s | 0/1 · 565k · 256s | 0/1 · 627k · 324s | 0/1 · 296k · 69s |
+| om2w-8103786e | 0/1 · 102k · 157s | 0/1 · 108k · 61s | 1/1 · 162k · 33s | 1/1 · 877k · 592s | 1/1 · 265k · 148s | 1/1 · 659k · 178s | 0/1 · 191k · 55s |
+| om2w-fc53ddd3 | 0/1 · 4254k · 484s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 3234k · 564s | 0/1 · 2812k · 430s |
+| om2w-47186fac | 1/1 · 1260k · 198s | 0/1 · 836k · 153s | 0/1 · 1303k · 299s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 956k · 126s | 0/1 · 0k · 600s |
+| om2w-a0a18ca6 | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 782k · 334s | 0/1 · 0k · 600s | 0/1 · 2692k · 463s |
+| om2w-bb314cb8 | 1/1 · 1013k · 144s | 1/1 · 1295k · 284s | 0/1 · 76k · 39s | 1/1 · 1564k · 453s | 1/1 · 300k · 118s | 0/1 · 1079k · 314s | 0/1 · 310k · 105s |
+| om2w-d1807551 | 0/1 · 797k · 271s | 0/1 · 783k · 134s | 0/1 · 317k · 89s | 0/1 · 329k · 81s | 0/1 · 185k · 82s | 1/1 · 1829k · 263s | 0/1 · 713k · 229s |
+| om2w-3443e9c3 | 1/1 · 230k · 43s | 1/1 · 193k · 41s | 1/1 · 372k · 52s | 1/1 · 80k · 48s | 1/1 · 166k · 113s | 1/1 · 734k · 187s | 1/1 · 170k · 100s |
+| om2w-d392e154 | 1/1 · 2504k · 496s | 1/1 · 1254k · 278s | 1/1 · 219k · 113s | 0/1 · 1263k · 164s | 1/1 · 1247k · 351s | 1/1 · 2514k · 574s | 1/1 · 3006k · 584s |
 | om2w-92a3d423 | 1/1 · 145k · 41s | 1/1 · 149k · 33s | 1/1 · 179k · 50s | 1/1 · 53k · 56s | 1/1 · 62k · 49s | 1/1 · 213k · 33s | 1/1 · 296k · 52s |
 | om2w-64b76158 | 0/1 · 1345k · 143s | 0/1 · 3453k · 388s | 0/1 · 465k · 140s | 0/1 · 869k · 237s | 0/1 · 0k · 600s | 0/1 · 0k · 600s | 0/1 · 0k · 600s |
 | om2w-82eb3bfe | 1/1 · 786k · 183s | 1/1 · 273k · 43s | 0/1 · 1382k · 280s | 0/1 · 680k · 141s | 1/1 · 515k · 224s | 1/1 · 882k · 69s | 1/1 · 1141k · 115s |
@@ -152,6 +162,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **agent-browser** · om2w-3ef64f34 #1: WebJudge: failure. The agent correctly accessed YouTube Kids without logging in, verified parental age (1992), skipped sign-in, accepted privacy terms, selected the “Younger (5–8)” profile, turned sea
 - **agent-browser** · om2w-43a1ca25 #1: WebJudge: failure. The agent correctly searched for neurosurgeons in Chicago and opened the Availability filter, even checking “Tomorrow.” However, there is no evidence that the filter was applied (no
 - **agent-browser** · om2w-442a450e #1: WebJudge: failure. The agent successfully located the 401(k) calculator and adjusted the sliders toward the required inputs (ages, 3% return, $8,000 employee and employer contributions), but it never 
+- **agent-browser** · om2w-47186fac #1: WebJudge: failure. The agent navigated to the “Best cars” page (fulfilling the filter requirement implicitly), selected the first product card, and then scraped the ownership‐cost rating stars (a nume
 - **agent-browser** · om2w-47e314cc #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **agent-browser** · om2w-4c186c6e #1: timeout after 10 min
 - **agent-browser** · om2w-547f5729 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
@@ -168,6 +179,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **agent-browser** · om2w-84f806c7 #1: WebJudge: failure. The agent never finalized the search by explicitly sorting or confirming “Nearest” for bird‐only shelters around 10012. Although they injected a URL with postalCode=10012, radius=50
 - **agent-browser** · om2w-8689af4d #1: WebJudge: failure. The agent did locate a certified refurbished iPad Air (256 GB, Blue) and successfully added it to the bag, confirming the bag total at \$669.00. However, it never applied or confirm
 - **agent-browser** · om2w-987bad7c #1: timeout after 10 min
+- **agent-browser** · om2w-a0a18ca6 #1: timeout after 10 min
 - **agent-browser** · om2w-a5c87cc1 #1: WebJudge: failure. The agent successfully navigated to the AccuWeather air‐quality page for Maine North, County Cork, Ireland and located the SO₂ concentration (0 µg/m³) with an “Excellent” rating. Ho
 - **agent-browser** · om2w-a6f0434c #1: WebJudge: failure. The agent correctly navigated to Tesla’s historical data page and applied a date range filter for March 17, 2023, but never extracted or reported the actual closing stock price for 
 - **agent-browser** · om2w-a8b9edd5 #1: WebJudge: failure. The agent successfully navigated to the FedEx Rate & Ship form, entered the origin (Dallas, TX 75201), destination (New York, NY 10001), and package weight (4 lb), clicked to get ra
@@ -177,6 +189,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **agent-browser** · om2w-b99c0296 #1: WebJudge: failure. The agent correctly selected Fall 2023, Computer Science, Graduate level, and Tuesdays, but it never applied the “Start Time” filter for courses beginning between 2:00 pm and 6:00 p
 - **agent-browser** · om2w-ba01ea55 #1: WebJudge: failure. The agent correctly navigated to Google Maps, set location to Manhattan, NY, filtered for 4 guests, and sorted by rating. However, they clicked on “Pestana Park Avenue” (4.8★), the 
 - **agent-browser** · om2w-ba2a469a #1: WebJudge: failure. The agent only performed a keyword search for “beginner computer science python” but never applied the Coursera “Level → Beginner” filter or confirmed an explicit “Beginner” label o
+- **agent-browser** · om2w-bb314cb8 #1: WebJudge: failure. The agent navigated to the ICLR 2016 event page and eventually opened a talk (“Deep Compression”) but never applied a “highest” sort/filter, nor explicitly filtered or selected the 
 - **agent-browser** · om2w-bf3b311c #1: WebJudge: failure. The user wanted a side-by-side comparison of Apple Watch models and then detailed information on the Ultra version. The agent did open the “Compare Apple Watch Models” page, but nev
 - **agent-browser** · om2w-c1d6ea6f #1: timeout after 10 min
 - **agent-browser** · om2w-c3a33396 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
@@ -185,15 +198,18 @@ _Each cell: passed/runs · median tokens · median time._
 - **agent-browser** · om2w-d1970c16 #1: WebJudge: failure. Although the agent eventually invoked an add_to_cart with quantity 5 and the cart icon shows “5,” none of the provided snapshots ever display the required filters (Dry, 2020, United
 - **agent-browser** · om2w-d71be72a #1: WebJudge: failure. The agent successfully navigated to Apple’s MacBook Air specs page, selected the Tech Specs tab, and toggled between the 13-inch and 15-inch models. However, it never scrolled or ex
 - **agent-browser** · om2w-d9d8b7d8 #1: WebJudge: failure. The agent correctly located the SAM2 repo and applied the author filter for NielsRogge, but never navigated to the bottom of the filtered commit list or otherwise identified which c
+- **agent-browser** · om2w-da8f3823 #1: WebJudge: failure. The agent never applied a sort or filter to list press releases from oldest to newest, nor did it navigate to the lowest available year. It only viewed 2020 and 2019 entries and the
 - **agent-browser** · om2w-e9f4dfc6 #1: WebJudge: failure. The agent successfully searched for “Pediatrician” near 90028 and applied the “4 Stars & Up” rating filter, confirming key points #1, #2, and #4. However, at no point did the agent 
 - **agent-browser** · om2w-f2be37a9 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **agent-browser** · om2w-f389398d #1: WebJudge: failure. The agent successfully navigated to the Climate news section on The Weather Network and opened several articles, but never applied or confirmed a “newest” sort or filter on the clim
+- **agent-browser** · om2w-fc53ddd3 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-cli** · om2w-0a0fa834 #1: WebJudge: failure. The agent correctly set the departure port to Los Angeles and sorted by lowest price, but it never properly applied a “at least 8 days” duration filter (instead trying 14-day and 15
 - **playwright-cli** · om2w-1c3b747a #1: WebJudge: failure. The agent correctly fetched a list of active competitions sorted by prize, but then navigated to the ARC Prize 2026 competition instead of the NFL Big Data Bowl 2027 (the contest wi
 - **playwright-cli** · om2w-27fa3ac2 #1: WebJudge: failure. The agent correctly set the Winter 2022–23 term, department code (CHEM), and active status filters, and used the timeschedule view and programmatic XML filtering to identify courses
 - **playwright-cli** · om2w-29b7372d #1: WebJudge: failure. The agent successfully navigated to Google Finance and located the Microsoft stock page (steps 1–2). However, there is no evidence a “Top news” sort filter was applied (key point 3)
 - **playwright-cli** · om2w-3ef64f34 #1: WebJudge: failure. The agent correctly accessed YouTube Kids, passed the parental gate (birth year 1992), skipped sign-in, left search disabled, and chose the appropriate content experience for a 6-ye
 - **playwright-cli** · om2w-43a1ca25 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
+- **playwright-cli** · om2w-47186fac #1: timeout after 10 min
 - **playwright-cli** · om2w-47e314cc #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-cli** · om2w-4c186c6e #1: timeout after 10 min
 - **playwright-cli** · om2w-547f5729 #1: timeout after 10 min
@@ -206,24 +222,30 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-cli** · om2w-6b2cfae0 #1: timeout after 10 min
 - **playwright-cli** · om2w-6ca20f1d #1: WebJudge: failure. The agent correctly located and navigated to the Child Benefit overview, eligibility, and how-to-claim pages, but at no point did it surface the actual eligibility criteria, the “ho
 - **playwright-cli** · om2w-7072d094 #1: WebJudge: failure. The agent correctly applied the “No Foreign Transaction Fee” filter, selected the first two personal cards (Platinum and Gold), and launched the comparison interface. However, the f
+- **playwright-cli** · om2w-8103786e #1: WebJudge: failure. The agent successfully navigated to the Mayo Clinic site, searched “chest pain,” located the “Chest pain” page, and clicked “View possible causes.” However, it never retrieved or di
 - **playwright-cli** · om2w-824eb7bb #1: WebJudge: failure. The agent did navigate to the Women’s Black Swimsuits collection, applied the size “L” filter and sorted by price ascending. It identified the lowest‐price item (the Women’s Shaping
 - **playwright-cli** · om2w-84f806c7 #1: WebJudge: failure. The agent successfully entered the ZIP code 10012, selected “Birds” as the species, and even set sorting to “Nearest,” but it never applied or confirmed a filter restricting results
 - **playwright-cli** · om2w-9829f308 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-cli** · om2w-9ed38272 #1: WebJudge: failure. The agent correctly set the starting balance, rate of return, current tax rate, retirement tax rate, and monthly contribution, and it displayed a comparison chart with Roth IRA and 
+- **playwright-cli** · om2w-a0a18ca6 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-cli** · om2w-a6f0434c #1: WebJudge: failure. The agent correctly navigated to Tesla’s historical data page and set the date range to include March 17, 2023. It located the “Mar 17, 2023” row but never extracted or displayed th
 - **playwright-cli** · om2w-a96fca87 #1: WebJudge: failure. The agent did navigate to the Business pricing tab and exposed the “Estimated price calculator,” but none of the snapshots actually show the calculator after it’s been set to 100 us
 - **playwright-cli** · om2w-aa4b5cb7 #1: WebJudge: failure. The agent correctly filtered by category (Board) and score (10) on the IGN reviews page but never demonstrated that the “Editors’ Choice” toggle was actually applied or that any res
 - **playwright-cli** · om2w-ade4c09a #1: WebJudge: failure. The agent navigated to the AeroAPI landing page and located the section IDs for pricing cards and comparison tables, but it never actually clicked “View pricing tiers” or fetched an
 - **playwright-cli** · om2w-b64f938a #1: timeout after 10 min
+- **playwright-cli** · om2w-bb314cb8 #1: WebJudge: failure. The agent did open ICLR and navigate to the 2016 videolectures listing, but never applied any “sort by first” or “Best Paper Award” filter in the UI. The click on f23e220 appears to
 - **playwright-cli** · om2w-c1d6ea6f #1: timeout after 10 min
 - **playwright-cli** · om2w-c94551d2 #1: timeout after 10 min
+- **playwright-cli** · om2w-d1807551 #1: WebJudge: failure. The agent correctly set the location to “Dallas, TX” and the practice area to “Divorce” and retrieved a list of top-rated divorce lawyers in Dallas. However, no filter or indication
 - **playwright-cli** · om2w-d1970c16 #1: WebJudge: failure. The agent never confirmed the user’s age or selected Texas as the shipping state via the required pop‐up, and no explicit filters for vintage, dryness, U.S. origin, or the $15–$20 p
 - **playwright-cli** · om2w-d71be72a #1: WebJudge: failure. The agent successfully accessed Apple’s official site, navigated to the MacBook Air page, clicked the “Tech Specs” tab, and toggled between the 13-inch and 15-inch models. However, 
 - **playwright-cli** · om2w-d9d8b7d8 #1: WebJudge: failure. The agent correctly identified the official facebookresearch/sam2 repository, listed commits, and applied the author filter for NielsRogge. However, it never switched the commit vie
+- **playwright-cli** · om2w-da8f3823 #1: WebJudge: failure. The agent never used the site’s official “Year” filter or a sort‐ascending control to isolate the earliest press release; instead it guessed by jumping to page=17 and opened the fir
 - **playwright-cli** · om2w-e9f4dfc6 #1: WebJudge: failure. The agent correctly searched for “Pediatrician” near zip code 90028 and applied the ≥ 4-star rating filter, but it never used the site’s specialty filter to restrict results to Inte
 - **playwright-cli** · om2w-f2be37a9 #1: WebJudge: failure. The agent correctly navigated to the event‐search page, opened the “Companion Events” section, checked “Obedience,” and set “New York” in the state filter. However, it never applied
 - **playwright-cli** · om2w-f389398d #1: WebJudge: failure. The agent successfully navigated to the climate news section but never applied or confirmed a “latest” sort/filter to order articles by date. No filter control was used, and there’s
 - **playwright-cli** · om2w-fa9adb81 #1: WebJudge: failure. The agent correctly navigated to and identified “finebyme_2.mp3” as the #1 track on the Top 50 Rock chart (steps 2 and 3). However, it never provided clear evidence on a user’s home
+- **playwright-cli** · om2w-fc53ddd3 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-mcp** · om2w-07ec4a12 #1: WebJudge: failure. The agent successfully entered both “Folate Forte (multivitamin)” and “melatonin” into the interaction checker, but it never clicked the “Check Interactions” button or displayed the
 - **playwright-mcp** · om2w-0a0fa834 #1: WebJudge: failure. The agent correctly filtered departures from Los Angeles for cruises lasting at least 8 days and sorted by lowest price, then navigated to the cheapest 8-day Mexican Riviera itinera
 - **playwright-mcp** · om2w-11abb668 #1: timeout after 10 min
@@ -249,9 +271,11 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp** · om2w-75146b7b #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-mcp** · om2w-75a1b5dc #1: WebJudge: failure. The agent never selected a specific beef sirloin recipe nor opened its reviews section. The key points—targeting a recipe with beef sirloin and opening its reviews—were not met.
 - **playwright-mcp** · om2w-783ce6a3 #1: WebJudge: failure. The agent correctly navigated to the Mayo Clinic College site, applied the exact filters for Location=Florida and Program Type=Internship, and confirmed there are 24 matching progra
+- **playwright-mcp** · om2w-8103786e #1: WebJudge: failure. The agent navigated to relevant pages but never extracted or displayed a list of possible causes specifically for sharp chest pain accompanied by anxiety. The final regex search did
 - **playwright-mcp** · om2w-84f806c7 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-mcp** · om2w-987bad7c #1: timeout after 10 min
 - **playwright-mcp** · om2w-9d46ccb9 #1: WebJudge: failure. The agent correctly navigated to the UPS shipping calculator, entered the origin (New York, NY 10001), destination (Truckee, CA 96162), package dimensions (4×4×4 inches), and weight
+- **playwright-mcp** · om2w-a0a18ca6 #1: timeout after 10 min
 - **playwright-mcp** · om2w-a5c87cc1 #1: WebJudge: failure. The agent ultimately navigated to the correct Air Quality Index page for Maine North and executed code to extract the “Over the past hour” section and parse the SO₂ line. However, n
 - **playwright-mcp** · om2w-a6f0434c #1: WebJudge: failure. The agent navigated to Tesla’s historical data page and set the date range to include March 17, 2023, but never displayed or extracted the closing price for that specific date. Key 
 - **playwright-mcp** · om2w-ade4c09a #1: WebJudge: failure. The agent navigated to FlightAware, located the AeroAPI page, identified plan categories (Personal, Standard, Premium) but did not retrieve or display their details side by side to 
@@ -261,8 +285,10 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp** · om2w-c1d6ea6f #1: timeout after 10 min
 - **playwright-mcp** · om2w-c3a33396 #1: WebJudge: failure. The agent correctly applied filters for certified pre-owned, model line “911,” location 97007 with a 200 mi radius, and sorted by price low to high. However, the required model‐year
 - **playwright-mcp** · om2w-c94551d2 #1: timeout after 10 min
+- **playwright-mcp** · om2w-d1807551 #1: WebJudge: failure. The agent never applied any filter or selection to link a Dallas-based divorce attorney to the Top 50 Women Texas Super Lawyers list. Although it found Melinda H. Eitzen’s Dallas fa
 - **playwright-mcp** · om2w-d1970c16 #1: WebJudge: failure. The agent only sorted by price and searched keywords but never applied a price range filter ($15–$20) or a dryness filter (“dry”). It also did not confirm that the selected 2020 Pin
 - **playwright-mcp** · om2w-d9d8b7d8 #1: WebJudge: failure. The agent correctly navigated to the facebookresearch/sam2 repo, applied the author filter for NielsRogge, and opened a commit page. However, there is no evidence they sorted or scr
+- **playwright-mcp** · om2w-da8f3823 #1: WebJudge: failure. The agent never actually applied a UI-based “earliest” sort or filter; it only hard-coded a year=2020 query and then opened the March 5, 2020 release without confirming that 2020 wa
 - **playwright-mcp** · om2w-dcd26e66 #1: WebJudge: failure. The agent correctly located and completed the 5-question weight management quiz, supplying answers that match all user factors (strong support system; enjoys cooking, family time, t
 - **playwright-mcp** · om2w-e9f4dfc6 #1: timeout after 10 min
 - **playwright-mcp** · om2w-f00e7acc #1: WebJudge: failure. The agent successfully navigated to the AccuWeather hourly forecast page for Boston, but never extracted or displayed any of the actual hourly forecast data (times, temperatures, co
@@ -271,6 +297,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp** · om2w-f389398d #1: WebJudge: failure. The agent navigated to the climate news section (meeting key point #1) but never applied or confirmed a “sort by latest” filter or control. It only viewed featured articles without 
 - **playwright-mcp** · om2w-fa9adb81 #1: WebJudge: failure. The agent successfully navigated to and displayed the user homepage for “beevader” and showed a reposted track (“finebyme_2.mp3”), satisfying key points #1 and #2. However, there is
 - **playwright-mcp** · om2w-fb7b4f78 #1: WebJudge: failure. The agent only navigated to the Discogs homepage and did not open or display the submissions overview page for releases. Key point 2 (view overview of the submission of releases) wa
+- **playwright-mcp** · om2w-fc53ddd3 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-mcp-tuned** · om2w-070c907d #1: WebJudge: failure. The agent only navigated to the general dentist search page for zip code 90210 and did not apply any specialty filter for pediatric dentistry nor a 5-mile distance filter. Key point
 - **playwright-mcp-tuned** · om2w-0a0fa834 #1: WebJudge: failure. The agent correctly filtered by departure port (Los Angeles), applied the duration filter for at least 8 days, and sorted results by lowest price, then navigated to the cheapest 8-d
 - **playwright-mcp-tuned** · om2w-11abb668 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
@@ -278,6 +305,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp-tuned** · om2w-1c3b747a #1: WebJudge: failure. The agent correctly applied the “Active” filter and sorted by “Reward” to pick the top‐prize ongoing competition (ARC Prize 2026 – ARC-AGI-3). It then opened the Code tab and sorted
 - **playwright-mcp-tuned** · om2w-2fc51dd3 #1: WebJudge: failure. The agent successfully filtered for climate-controlled units and located a facility 2.7 miles from 60538 offering a 10′×10′ climate-controlled unit. However, it never confirmed—via 
 - **playwright-mcp-tuned** · om2w-43a1ca25 #1: WebJudge: failure. The agent correctly filtered the search results for “Tomorrow” availability and identified several neurosurgeon profiles, meeting key points #1 (specialty) and #3 (appointment filte
+- **playwright-mcp-tuned** · om2w-47186fac #1: WebJudge: failure. The agent did navigate to the “Best Cars” > “Top Buys” list, but it never selected the first car’s detail page nor clicked the “Ownership cost” tab to retrieve the actual ownership 
 - **playwright-mcp-tuned** · om2w-47bfe8a7 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-mcp-tuned** · om2w-47e314cc #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **playwright-mcp-tuned** · om2w-4c186c6e #1: timeout after 10 min
@@ -290,12 +318,14 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp-tuned** · om2w-6b2cfae0 #1: timeout after 10 min
 - **playwright-mcp-tuned** · om2w-6ca20f1d #1: WebJudge: failure. The agent correctly navigated to the Child Benefit landing page, the eligibility page, and the claim page, but the snapshots (and reasoning) only show page headers and tables of con
 - **playwright-mcp-tuned** · om2w-6ebde509 #1: WebJudge: failure. The agent successfully entered “Human Resources” into the Target careers search and opened the Location filter, typing “Miami, FL” into the location box. However, the agent never co
+- **playwright-mcp-tuned** · om2w-8103786e #1: WebJudge: failure. The agent navigated to several Mayo Clinic pages and ran code to check HTTP status, but never extracted or presented any possible causes of sharp chest pain accompanied by anxiety. 
 - **playwright-mcp-tuned** · om2w-8689af4d #1: WebJudge: failure. The agent never applied the Storage filter to select 256 GB nor the Finish filter to restrict to blue—only the Model filter was used. Instead, it manually navigated to a presumed ch
 - **playwright-mcp-tuned** · om2w-905cb530 #1: timeout after 10 min
 - **playwright-mcp-tuned** · om2w-987bad7c #1: timeout after 10 min
 - **playwright-mcp-tuned** · om2w-9d09bc94 #1: timeout after 10 min
 - **playwright-mcp-tuned** · om2w-9d46ccb9 #1: WebJudge: failure. The agent correctly navigated to UPS’s rate‐quote page and filled in origin (New York, 10001), destination (Truckee, 96162), package dimensions (4×4×4 in) and weight (5 lbs), then c
 - **playwright-mcp-tuned** · om2w-9ed38272 #1: WebJudge: failure. The agent navigated correctly to the Chase IRA calculator, set all inputs exactly as specified (age 30 to 65, $30 000 start, 3% return, 13% current tax, 24% retirement tax), and gen
+- **playwright-mcp-tuned** · om2w-a0a18ca6 #1: timeout after 10 min
 - **playwright-mcp-tuned** · om2w-a6f0434c #1: WebJudge: failure. The agent correctly navigated to Yahoo Finance, searched for TSLA, clicked the Historical Data tab, set the date range to include March 17, 2023 (via URL parameters), and retrieved 
 - **playwright-mcp-tuned** · om2w-a8b9edd5 #1: WebJudge: failure. The agent correctly navigated to the FedEx rate page, rejected cookies, entered “Texas” as origin, “New York” as destination, set weight to 4 pounds, and clicked “Show Rates.” It th
 - **playwright-mcp-tuned** · om2w-aa4b5cb7 #1: WebJudge: failure. The agent correctly navigated to IGN, applied the Board genre, score “10” filter, and checked the Editor’s Choice box. However, it then opened the “Undaunted: Stalingrad Board Game 
@@ -307,6 +337,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp-tuned** · om2w-c39d6c24 #1: WebJudge: failure. The agent successfully navigated to Ahri’s champion page and located the skins carousel, but only clicked the next arrow once—revealing “After Hours Spirit Blossom Springs Ahri”—and
 - **playwright-mcp-tuned** · om2w-c3a33396 #1: timeout after 10 min
 - **playwright-mcp-tuned** · om2w-c94551d2 #1: WebJudge: failure. The agent navigated to the cats-for-adoption page and applied the 25-mile distance parameter, but never applied an age filter (young or adult) and sorted by “recent” (newest) rather
+- **playwright-mcp-tuned** · om2w-d1807551 #1: WebJudge: failure. The agent navigated to the Top 50 Women Texas list but never applied any geographic (Dallas) or practice‐area (divorce) filter on that list, nor did it verify that the chosen attorn
 - **playwright-mcp-tuned** · om2w-d1970c16 #1: WebJudge: failure. The agent never applied specific filters for year (2020), wine type (dry red), origin (United States), or price range (\$15–\$20). Instead, it browsed multiple pages without confirm
 - **playwright-mcp-tuned** · om2w-d71be72a #1: WebJudge: failure. The agent successfully navigated to Apple’s official MacBook Air Tech Specs page (ensuring the latest model), but never extracted or displayed any of the actual technical specificat
 - **playwright-mcp-tuned** · om2w-d9d8b7d8 #1: WebJudge: failure. The agent correctly located the official SAM2 repository and applied the author filter for NielsRogge, but never sorted commits by oldest/earliest date or navigated to the end of th
@@ -316,6 +347,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **playwright-mcp-tuned** · om2w-f05e87c5 #1: WebJudge: failure. The agent correctly used Algolia facetFilters to restrict to exactly the 2022 and 2023 batches, to companies in France, and to those hiring. They pulled back the matching hits, enum
 - **playwright-mcp-tuned** · om2w-f389398d #1: WebJudge: failure. The agent navigated to the climate news section and opened one featured article but never applied or confirmed a “latest” sort/filter on the climate news listings. There is no evide
 - **playwright-mcp-tuned** · om2w-fa9adb81 #1: WebJudge: failure. The agent did browse a user homepage and found a repost, but never confirmed that the reposted track (finebyme_2.mp3) was in fact the #1 song on the Top 50 Rock chart. There is no e
+- **playwright-mcp-tuned** · om2w-fc53ddd3 #1: timeout after 10 min
 - **stagehand** · om2w-070c907d #1: WebJudge: failure. The agent navigated to Healthgrades and even constructed a search URL for “pediatric dentist” with location=90210, but never applied or confirmed a 5-mile distance filter nor used t
 - **stagehand** · om2w-0a0fa834 #1: WebJudge: failure. The agent successfully applied the departure port (Los Angeles) and duration (6–9 days, covering ≥8 days) filters but never demonstrated sorting by price to identify the cheapest cr
 - **stagehand** · om2w-1c3b747a #1: WebJudge: failure. The agent never properly applied a “sort by prize (highest)” filter on the ongoing competitions list. Instead of selecting the NFL Big Data Bowl 2027 ($100,000) as the top‐prize ong
@@ -324,6 +356,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **stagehand** · om2w-3ef64f34 #1: timeout after 10 min
 - **stagehand** · om2w-43a1ca25 #1: WebJudge: failure. The agent successfully searched for “Neurosurgeon” and applied the “Tomorrow” availability filter, verifying appointment openings tomorrow (steps 1 & 3). However, at no point did th
 - **stagehand** · om2w-461ab9b0 #1: WebJudge: failure. The agent navigated to the Rule 605 Reports page and identified where the “July 2024” link appears, but never actually clicked it or retrieved the July 2024 Market Center Files. No 
+- **stagehand** · om2w-47186fac #1: WebJudge: failure. The agent navigated to the ‘Best Cars’ page and then to the ‘Top Buys’ list, assumed the first car was the Renault 4 E-Tech, and repeatedly loaded its review and MPG/running costs p
 - **stagehand** · om2w-47bfe8a7 #1: timeout after 10 min
 - **stagehand** · om2w-47e314cc #1: timeout after 10 min
 - **stagehand** · om2w-515f2e58 #1: WebJudge: failure. The agent correctly searched for “Samsung internal M.2 SSD” and applied the $25–$200 price filter (step 7) and the “New” condition filter (step 9). However, it never used the “Sort 
@@ -340,6 +373,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **stagehand** · om2w-9829f308 #1: WebJudge: failure. The agent navigated to the ESPN NBA scoreboard, selected the first game link (Hawks vs. Spurs) without explicitly filtering for “most recent” (no date or sort filter was applied). I
 - **stagehand** · om2w-987bad7c #1: WebJudge: failure. The agent correctly applied the used/2011 BMW 135 filter and set the max price to $30,000, and it navigated to multiple vehicle detail pages, even capturing dealer names and phone n
 - **stagehand** · om2w-9d09bc94 #1: WebJudge: failure. The agent correctly changed the location filter to Boston and selected “NHL” via the search suggestions, landing on the NHL category page with “Teams near Boston.” However, it never
+- **stagehand** · om2w-a0a18ca6 #1: timeout after 10 min
 - **stagehand** · om2w-a5c87cc1 #1: WebJudge: failure. The agent successfully navigated to the AccuWeather air quality page for Cork and expanded the “Current Pollutants” section, but never extracted or displayed the SO₂ concentration f
 - **stagehand** · om2w-a6f0434c #1: WebJudge: failure. The agent correctly navigated to the TSLA historical data page covering March 17, 2023, but never extracted or reported the closing stock price for that date. No filter or data retr
 - **stagehand** · om2w-a96fca87 #1: WebJudge: failure. The agent successfully navigated to the Business plan and attempted to fill the user, storage, and transfer fields via scripting. However, none of the provided snapshots or console 
@@ -348,17 +382,22 @@ _Each cell: passed/runs · median tokens · median time._
 - **stagehand** · om2w-b64f938a #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **stagehand** · om2w-b99c0296 #1: WebJudge: failure. The agent correctly navigated to the Berkeley Class Schedule, applied all required filters (term=Fall 2023, course_level=grad, subject=COMPSCI, meets_days for Tuesday and TuTh, star
 - **stagehand** · om2w-ba2a469a #1: WebJudge: failure. The agent never actually applied the “Level = Beginner” or a Python skills filter through the site’s filter controls—instead it relied on keyword queries. It also never selected or 
+- **stagehand** · om2w-bb314cb8 #1: WebJudge: failure. The agent never applied a “Best Paper Award” filter or confirmed its effect on the list of ICLR 2016 talks. Instead, it directly navigated to the entire ICLR 2016 San Juan videolect
 - **stagehand** · om2w-c1d6ea6f #1: WebJudge: failure. The agent successfully navigated to Google Shopping, set the “On sale” and “Black” finish filters, entered the $25–$60 price range, and triggered the filter. The displayed results a
 - **stagehand** · om2w-c3a33396 #1: timeout after 10 min
+- **stagehand** · om2w-d1807551 #1: WebJudge: failure. The agent navigated to the Top 50 Women Texas Super Lawyers list and visited individual profiles (e.g., Dawn Estes, Aubrey M. Connatser) whose URLs indicate they are Dallas-based an
 - **stagehand** · om2w-d1970c16 #1: timeout after 10 min
 - **stagehand** · om2w-d9d8b7d8 #1: WebJudge: failure. The agent correctly located the SAM2 repo and filtered commits by author=NielsRogge, but only viewed the most recent entries and a single commit (b72a8a9). It did not navigate to th
+- **stagehand** · om2w-da8f3823 #1: WebJudge: failure. The agent never applied a proper “earliest” sort or filter—only filtered by year 2020 and scraped releases from recent years. It then opened a 2020 press release rather than the chr
 - **stagehand** · om2w-e9f4dfc6 #1: WebJudge: failure. The agent correctly set “Pediatrics” and the location at zip 90028 (steps 1–2) and applied the “4 Stars & Up” rating filter (step 4). However, it never applied an “Internal Medicine
 - **stagehand** · om2w-f389398d #1: WebJudge: failure. The agent correctly navigated to the Climate news section on The Weather Network (topic “climate,” content type “news”) but never applied or confirmed a “sort by latest” filter/sort
+- **stagehand** · om2w-fc53ddd3 #1: timeout after 10 min
 - **wdio-mcp** · om2w-07ec4a12 #1: timeout after 10 min
 - **wdio-mcp** · om2w-180ed2ec #1: WebJudge: failure. The agent navigated to the UM-Dearborn site, clicked the “Giving” link and “Give Now” button, and even expanded the “Make a Straightforward Gift” panel. However, it never surfaced o
 - **wdio-mcp** · om2w-27fa3ac2 #1: WebJudge: failure. The agent correctly navigated to the ExploreCourses site and applied filters for Winter 2022–2023, graduate level, Monday (“day-2”), and afternoon (“time-3”), then viewed the schedu
 - **wdio-mcp** · om2w-43a1ca25 #1: WebJudge: failure. The agent correctly searched for neurosurgeons in New York and applied the “Mañana” (tomorrow) availability filter, but at no point did it surface a doctor who both clearly showed a
 - **wdio-mcp** · om2w-461ab9b0 #1: WebJudge: failure. The agent did navigate to the NYSE Rule 605 Market Center Files page, scroll to the list of monthly links, and ran scripts to identify and test “July 2024” links (including verifyin
+- **wdio-mcp** · om2w-47186fac #1: timeout after 10 min
 - **wdio-mcp** · om2w-47bfe8a7 #1: WebJudge: failure. The agent correctly filtered to Xiaomi and sorted by popularity, and did produce a comparison chart between two models (Redmi K90 Max vs Redmi K60). However, those two are not the f
 - **wdio-mcp** · om2w-47e314cc #1: timeout after 10 min
 - **wdio-mcp** · om2w-4c186c6e #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
@@ -377,6 +416,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **wdio-mcp** · om2w-987bad7c #1: timeout after 10 min
 - **wdio-mcp** · om2w-9ed38272 #1: WebJudge: failure. The agent correctly set all the input parameters (age 30–65, $30 000 starting balance, 3% return, 13% current tax, 24% retirement tax) in the combined IRA calculator, but never pres
 - **wdio-mcp** · om2w-9f1cba61 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
+- **wdio-mcp** · om2w-a0a18ca6 #1: timeout after 10 min
 - **wdio-mcp** · om2w-a172a5d9 #1: timeout after 10 min
 - **wdio-mcp** · om2w-a96fca87 #1: WebJudge: failure. No actions were taken to navigate to the pricing page or select the Business plan. The agent did not view or display any details for 100 users, 1 PB storage, or 50 TB transfer.
 - **wdio-mcp** · om2w-ade4c09a #1: WebJudge: failure. The agent successfully navigated to the AeroAPI pricing page and executed scripts to extract headings, section text, and tables, but it did not present or summarize the actual plan 
@@ -385,15 +425,19 @@ _Each cell: passed/runs · median tokens · median time._
 - **wdio-mcp** · om2w-c1d6ea6f #1: WebJudge: failure. The agent correctly applied the “On sale,” “Black,” and $25–$60 price‐range filters and scrolled through the results. However, it never presented a consolidated list of the qualifyi
 - **wdio-mcp** · om2w-c3a33396 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
 - **wdio-mcp** · om2w-c94551d2 #1: timeout after 10 min
+- **wdio-mcp** · om2w-d1807551 #1: WebJudge: failure. The agent navigated to the Top 50 Women Texas Super Lawyers list and selected a family-law attorney (Aubrey M. Connatser) but never applied or confirmed a “Dallas” location filter o
 - **wdio-mcp** · om2w-d1970c16 #1: Error: Claude Code returned an error result: Reached maximum number of turns (80)
+- **wdio-mcp** · om2w-d392e154 #1: Error: Claude Code returned an error result: Autocompact is thrashing: the context refilled to the limit within 3 turns of the previous compact, 3 times in a row. A file being read or a tool output is
 - **wdio-mcp** · om2w-d71be72a #1: WebJudge: failure. The agent navigated to Apple’s official site and reached the MacBook Air Tech Specs page, satisfying source requirement. However, none of the provided snapshots or the script output
 - **wdio-mcp** · om2w-d9d8b7d8 #1: WebJudge: failure. The agent correctly identified the facebookresearch/sam2 repo and applied the author filter for “NielsRogge,” showing commits by that author. However, it never sorted or scrolled to
+- **wdio-mcp** · om2w-da8f3823 #1: WebJudge: failure. The agent navigated to the press releases page and applied a year filter set to 2020, then paged and clicked an item, but never identified or selected the earliest available year or
 - **wdio-mcp** · om2w-dcd26e66 #1: WebJudge: failure. The agent navigated to and progressed through multiple quiz questions—addressing support system, joy activities, exercise habits, eating out, and portion control/cravings—but never 
 - **wdio-mcp** · om2w-e9f4dfc6 #1: timeout after 10 min
 - **wdio-mcp** · om2w-f05e87c5 #1: WebJudge: failure. The agent did correctly apply the Winter 2022, Summer 2022, Winter 2023, and Summer 2023 batch filters and used the “Is Hiring” checkbox, but it never properly combined those with a
 - **wdio-mcp** · om2w-f2be37a9 #1: WebJudge: failure. The agent did apply the correct filter parameters—event_type=OBED, event_states=NY, and set the month to Nov 2026 (i.e. “next month” relative to Oct 2026). However, it never clicked
 - **wdio-mcp** · om2w-f389398d #1: WebJudge: failure. The agent navigated to the climate news section (key point 1) but never explicitly applied or confirmed a “Sort by latest” filter. There is no evidence of selecting a “latest” sort 
 - **wdio-mcp** · om2w-fa9adb81 #1: WebJudge: failure. The agent correctly navigated to the Top 50 Rock chart, clicked the #1 track, viewed its “Reposted by” list, and then clicked through to a user’s homepage and opened their Reposts t
+- **wdio-mcp** · om2w-fc53ddd3 #1: timeout after 10 min
 - **wdio-session** · om2w-070c907d #1: timeout after 10 min
 - **wdio-session** · om2w-0a0fa834 #1: WebJudge: failure. The agent never correctly applied the duration filter to include only sailings of at least 8 days (it selected “6 – 9 Days,” which admits 6- and 7-day cruises, then “10+ Days,” so t
 - **wdio-session** · om2w-180ed2ec #1: timeout after 10 min
@@ -401,6 +445,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **wdio-session** · om2w-27fa3ac2 #1: WebJudge: failure. The agent correctly navigated to the Winter 2022-2023 schedule view for CHEM courses and scraped meeting info, but it never applied a graduate-level filter via the site’s filter UI 
 - **wdio-session** · om2w-43a1ca25 #1: timeout after 10 min
 - **wdio-session** · om2w-461ab9b0 #1: timeout after 10 min
+- **wdio-session** · om2w-47186fac #1: timeout after 10 min
 - **wdio-session** · om2w-47bfe8a7 #1: timeout after 10 min
 - **wdio-session** · om2w-47e314cc #1: timeout after 10 min
 - **wdio-session** · om2w-4c186c6e #1: timeout after 10 min
@@ -417,6 +462,7 @@ _Each cell: passed/runs · median tokens · median time._
 - **wdio-session** · om2w-95cad96f #1: timeout after 10 min
 - **wdio-session** · om2w-9829f308 #1: timeout after 10 min
 - **wdio-session** · om2w-987bad7c #1: timeout after 10 min
+- **wdio-session** · om2w-a0a18ca6 #1: WebJudge: failure. The agent did sort by Best Sellers and navigated to the men’s T-shirts category and even added an item to the cart. However, it never applied the specific “Halloween” event filter, 
 - **wdio-session** · om2w-a6f0434c #1: WebJudge: failure. The agent correctly navigated to Yahoo Finance, selected TSLA, opened the Historical Data tab, and set the date range to include March 17, 2023. It located the “Mar 17, 2023” row an
 - **wdio-session** · om2w-a96fca87 #1: WebJudge: failure. The agent did navigate to the Business pricing page and set the number of users to 100 and the storage quota to 1 PB (1 000 TB), fulfilling key points (1)–(3). While the transfer‐qu
 - **wdio-session** · om2w-aa4b5cb7 #1: WebJudge: failure. The agent correctly navigated to IGN, applied the board game category filter and the score=10 filter, and found a board game review with a 10 rating. However, the Editor’s Choice to
@@ -425,12 +471,15 @@ _Each cell: passed/runs · median tokens · median time._
 - **wdio-session** · om2w-ba01ea55 #1: WebJudge: failure. The agent did set the location to Manhattan and guest count to 4, and it applied the “Sort by rating” filter. It then identified transit routes and correctly picked the fastest (39 
 - **wdio-session** · om2w-c3a33396 #1: timeout after 10 min
 - **wdio-session** · om2w-c94551d2 #1: WebJudge: failure. The agent correctly navigated to the cats-for-adoption page, set the distance filter to 25 miles, and checked both Young and Adult age filters. However, at no point did the agent ac
+- **wdio-session** · om2w-d1807551 #1: WebJudge: failure. The agent navigated to the Top 50 Women Texas Super Lawyers list and viewed profiles, but never selected or displayed a Dallas‐based divorce lawyer from that list who meets the incl
 - **wdio-session** · om2w-d1970c16 #1: timeout after 10 min
 - **wdio-session** · om2w-d71be72a #1: WebJudge: failure. The agent successfully navigated to Apple’s site, clicked “MacBook Air,” opened the “Tech Specs” section, and selected the 15-inch model (the latest MacBook Air). However, at no poi
+- **wdio-session** · om2w-da8f3823 #1: WebJudge: failure. The agent never applied a true “earliest first” sort or confirmed that the year filter was set to the oldest available date. Instead it toggled the year filter (2020) and then navig
 - **wdio-session** · om2w-e9f4dfc6 #1: timeout after 10 min
 - **wdio-session** · om2w-f00e7acc #1: WebJudge: failure. The agent successfully navigated to AccuWeather’s Boston page and clicked the “Hourly” tab, confirming they reached the correct hourly forecast page. However, the snapshots only sho
 - **wdio-session** · om2w-f389398d #1: timeout after 10 min
 - **wdio-session** · om2w-fa9adb81 #1: WebJudge: failure. The agent successfully navigated to a user homepage (“beevader”) who reposted the #1 track (Quadeca – finebyme) from the Top 50 Rock chart, satisfying points 1, 2, and 4. However, t
+- **wdio-session** · om2w-fc53ddd3 #1: timeout after 10 min
 
 ## Environment
 
@@ -444,6 +493,7 @@ _Each cell: passed/runs · median tokens · median time._
 | `shard 06` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 7763 64-Core Processor | v24.21.0 | Google Chrome 154.0.8037.97 |
 | `shard 07` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 7763 64-Core Processor | v24.21.0 | Google Chrome 154.0.8037.97 |
 | `shard 08` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 9V74 80-Core Processor | v24.21.0 | Google Chrome 154.0.8037.97 |
+| `shard 09` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 7763 64-Core Processor | v24.21.0 | Google Chrome 154.0.8037.97 |
 | `shard 10` | Linux 6.17.0-1022-azure (x64) | 4× AMD EPYC 7763 64-Core Processor | v24.21.0 | Google Chrome 154.0.8037.97 |
 
-The tasks were split into 9 shards, one job and runner each. Every setup ran every task of a shard in that shard's job, interleaved in one shuffled order, so the setups on one task shared an IP address and a time window.
+The tasks were split into 10 shards, one job and runner each. Every setup ran every task of a shard in that shard's job, interleaved in one shuffled order, so the setups on one task shared an IP address and a time window.

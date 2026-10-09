@@ -23,13 +23,13 @@ This repository runs a fixed sample of 100 tasks from [Online-Mind2Web](https://
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 589k | $0.026 | 48% (43/90) | 106 s | 27.5 |
-| playwright-mcp-tuned | 574k | $0.029 | 50% (45/90) | 93 s | 27 |
-| stagehand | 412k | $0.022 | 58% (52/90) | 91 s | 22 |
-| wdio-mcp | 347k | $0.017 | 56% (50/90) | 113 s | 32 |
-| wdio-session | 167k | $0.010 | 59% (53/90) | 146 s | 26.5 |
-| agent-browser | 729k | $0.034 | 50% (45/90) | 141 s | 36 |
-| playwright-cli | 658k | $0.028 | 60% (54/90) | 149 s | 33 |
+| playwright-mcp | 652k | $0.028 | 48% (48/100) | 123 s | 28 |
+| playwright-mcp-tuned | 574k | $0.029 | 50% (50/100) | 106 s | 27.5 |
+| stagehand | 354k | $0.022 | 56% (56/100) | 91 s | 22 |
+| wdio-mcp | 340k | $0.016 | 54% (54/100) | 114 s | 32 |
+| wdio-session | 168k | $0.010 | 58% (58/100) | 150 s | 26.5 |
+| agent-browser | 735k | $0.036 | 50% (50/100) | 157 s | 36.5 |
+| playwright-cli | 641k | $0.029 | 57% (57/100) | 149 s | 33 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 

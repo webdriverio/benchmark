@@ -2,7 +2,7 @@
   "suite": "online-mind2web",
   "screenshots": true,
   "startedAt": "2026-10-09T04:16:41.918Z",
-  "finishedAt": "2026-10-09T05:32:29.603Z",
+  "finishedAt": "2026-10-09T07:07:19.334Z",
   "model": "deepseek-flash-4-1",
   "provider": {
     "name": "openrouter",
@@ -16,7 +16,7 @@
   },
   "runsPerTask": 1,
   "seed": 1,
-  "planned": 630,
+  "planned": 700,
   "maxTurns": 80,
   "timeoutMin": 10,
   "tasks": [
@@ -100,6 +100,16 @@
     "om2w-ba01ea55",
     "om2w-f2be37a9",
     "om2w-b64f938a",
+    "om2w-47186fac",
+    "om2w-bb314cb8",
+    "om2w-56f8890a",
+    "om2w-d1807551",
+    "om2w-d392e154",
+    "om2w-da8f3823",
+    "om2w-8103786e",
+    "om2w-fc53ddd3",
+    "om2w-a0a18ca6",
+    "om2w-3443e9c3",
     "om2w-82eb3bfe",
     "om2w-a96fca87",
     "om2w-64b76158",
@@ -214,6 +224,13 @@
     "shard 08": {
       "os": "Linux 6.17.0-1022-azure (x64)",
       "cpus": "4× AMD EPYC 9V74 80-Core Processor",
+      "node": "v24.21.0",
+      "chrome": "Google Chrome 154.0.8037.97",
+      "agentSdk": "0.3.288"
+    },
+    "shard 09": {
+      "os": "Linux 6.17.0-1022-azure (x64)",
+      "cpus": "4× AMD EPYC 7763 64-Core Processor",
       "node": "v24.21.0",
       "chrome": "Google Chrome 154.0.8037.97",
       "agentSdk": "0.3.288"
