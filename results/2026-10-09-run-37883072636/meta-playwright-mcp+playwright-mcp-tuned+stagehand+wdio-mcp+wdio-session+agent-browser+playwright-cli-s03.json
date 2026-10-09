@@ -1,0 +1,85 @@
+{
+  "suite": "online-mind2web",
+  "screenshots": true,
+  "startedAt": "2026-10-09T04:16:50.903Z",
+  "finishedAt": "2026-10-09T05:19:08.173Z",
+  "model": "deepseek-flash-4-1",
+  "provider": {
+    "name": "openrouter",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "pricingUsdPerToken": {
+      "input": 3e-7,
+      "output": 0.0000012,
+      "cacheRead": 6e-9,
+      "cacheWrite": 3e-7
+    }
+  },
+  "runsPerTask": 1,
+  "seed": 1,
+  "shard": "03",
+  "planned": 70,
+  "maxTurns": 80,
+  "timeoutMin": 10,
+  "tasks": [
+    "om2w-29b7372d",
+    "om2w-f00e7acc",
+    "om2w-bb518416",
+    "om2w-11abb668",
+    "om2w-c94551d2",
+    "om2w-63d6866f",
+    "om2w-d9d8b7d8",
+    "om2w-e9f4dfc6",
+    "om2w-7680a920",
+    "om2w-f05e87c5"
+  ],
+  "setups": {
+    "playwright-mcp": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "playwright-mcp-tuned": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "stagehand": {
+      "pkg": "browserbase/stagehand",
+      "version": "4.1.0+cd7b230",
+      "url": "https://github.com/browserbase/stagehand/tree/cd7b230778cf92269e4cb90e80d97f5113781c51"
+    },
+    "wdio-mcp": {
+      "pkg": "@wdio/mcp",
+      "version": "4.0.0",
+      "url": "https://www.npmjs.com/package/@wdio/mcp/v/4.0.0"
+    },
+    "wdio-session": {
+      "pkg": "@wdio/cli",
+      "version": "10.0.2",
+      "url": "https://www.npmjs.com/package/@wdio/cli/v/10.0.2"
+    },
+    "agent-browser": {
+      "pkg": "agent-browser",
+      "version": "0.38.2",
+      "url": "https://www.npmjs.com/package/agent-browser/v/0.38.2"
+    },
+    "playwright-cli": {
+      "pkg": "@playwright/cli",
+      "version": "0.1.22",
+      "url": "https://www.npmjs.com/package/@playwright/cli/v/0.1.22"
+    }
+  },
+  "workflowRun": {
+    "url": "https://github.com/webdriverio/benchmark/actions/runs/37883072636",
+    "id": "37883072636",
+    "attempt": "1"
+  },
+  "commit": "0226d803effd093a9911e715e185741ceaf748fd",
+  "environment": {
+    "os": "Linux 6.17.0-1022-azure (x64)",
+    "cpus": "4× Intel(R) Xeon(R) 6973P-C",
+    "node": "v24.21.0",
+    "chrome": "Google Chrome 154.0.8037.97",
+    "agentSdk": "0.3.288"
+  }
+}

@@ -19,17 +19,17 @@ This repository runs a fixed sample of 100 tasks from [Online-Mind2Web](https://
 ## Latest results
 
 <!-- results:start -->
-**Online-Mind2Web, DeepSeek V4.1 Flash.** Latest run: [2026-10-09-run-37878674146](results/2026-10-09-run-37878674146/report.md) on 2026-10-09, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37878674146).
+**Online-Mind2Web, DeepSeek V4.1 Flash.** Latest run: [2026-10-09-run-37883072636](results/2026-10-09-run-37883072636/report.md) on 2026-10-09, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37883072636).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 515k | $0.028 | 57% (32/56) | 87 s | 26 |
-| playwright-mcp-tuned | 507k | $0.027 | 56% (36/64) | 116 s | 27.5 |
-| stagehand | 405k | $0.027 | 67% (35/52) | 103 s | 24.5 |
-| wdio-mcp | 259k | $0.016 | 67% (44/66) | 100 s | 29 |
-| wdio-session | 229k | $0.014 | 69% (45/65) | 171 s | 26 |
-| agent-browser | 730k | $0.038 | 57% (37/65) | 132 s | 31 |
-| playwright-cli | 742k | $0.034 | 51% (22/43) | 202 s | 39 |
+| playwright-mcp | 589k | $0.026 | 48% (43/90) | 106 s | 27.5 |
+| playwright-mcp-tuned | 574k | $0.029 | 50% (45/90) | 93 s | 27 |
+| stagehand | 412k | $0.022 | 58% (52/90) | 91 s | 22 |
+| wdio-mcp | 347k | $0.017 | 56% (50/90) | 113 s | 32 |
+| wdio-session | 167k | $0.010 | 59% (53/90) | 146 s | 26.5 |
+| agent-browser | 729k | $0.034 | 50% (45/90) | 141 s | 36 |
+| playwright-cli | 658k | $0.028 | 60% (54/90) | 149 s | 33 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
