@@ -29,6 +29,10 @@ interface Meta {
     model: string
     runsPerTask: number
     seed: number
+    /** this job's part of a sharded run (see plan.ts) */
+    shard?: string
+    /** runs in the plan, after merging: of every shard */
+    planned?: number
     maxTurns: number
     timeoutMin: number
     tasks: string[]
@@ -36,8 +40,10 @@ interface Meta {
     workflowRun?: { url: string, id: string, attempt?: string }
     commit: string
     environment: Record<string, string>
-    /** per setup, after merging: every job ran on its own runner */
+    /** per job, after merging: every job ran on its own runner */
     environments?: Record<string, Record<string, string>>
+    /** after merging: setups whose shards installed different versions (a release during the run) */
+    versionMismatch?: Record<string, string[]>
 }
 
 async function mergeMeta (dir: string): Promise<Meta> {
@@ -46,14 +52,23 @@ async function mergeMeta (dir: string): Promise<Meta> {
         throw new Error(`no meta-*.json in ${dir}`)
     }
     const metas: Meta[] = await Promise.all(files.map(async (f) => JSON.parse(await fs.readFile(path.join(dir, f), 'utf8'))))
+    metas.sort((a, b) => (a.shard ?? '').localeCompare(b.shard ?? ''))
     const [first] = metas
     for (const m of metas) {
         if (m.model !== first.model || m.runsPerTask !== first.runsPerTask || m.seed !== first.seed || m.suite !== first.suite) {
             throw new Error('result files disagree on suite, model, runs or seed; they come from different benchmark runs')
         }
     }
+    const sharded = metas.some((m) => m.shard)
+    const versionMismatch = Object.fromEntries(ORDER.flatMap((id) => {
+        const versions = [...new Set(metas.flatMap((m) => m.setups[id]?.version ?? []))]
+        return versions.length > 1 ? [[id, versions]] : []
+    }))
+    const { shard: _, ...shared } = first
     return {
-        ...first,
+        ...shared,
+        ...(metas.every((m) => m.planned !== undefined) && { planned: metas.reduce((sum, m) => sum + m.planned!, 0) }),
+        ...(Object.keys(versionMismatch).length && { versionMismatch }),
         startedAt: metas.map((m) => m.startedAt).sort()[0],
         finishedAt: metas.map((m) => m.finishedAt ?? '').sort().at(-1) || undefined,
         tasks: [...new Set(metas.flatMap((m) => m.tasks))],
@@ -61,17 +76,19 @@ async function mergeMeta (dir: string): Promise<Meta> {
             const found = metas.find((m) => m.setups[id])?.setups[id]
             return found ? [[id, found]] : []
         })),
-        environments: Object.fromEntries(ORDER.flatMap((id) => {
-            const found = metas.find((m) => m.setups[id])
-            return found ? [[id, found.environment]] : []
-        }))
+        environments: sharded
+            ? Object.fromEntries(metas.map((m) => [`shard ${m.shard}`, m.environment]))
+            : Object.fromEntries(ORDER.flatMap((id) => {
+                const found = metas.find((m) => m.setups[id])
+                return found ? [[id, found.environment]] : []
+            }))
     }
 }
 
 const version = (s?: SetupMeta) => s?.skipped ? 'skipped' : s?.version ?? 'n/a'
 const minutes = (meta: Meta) => meta.finishedAt ? `${Math.round((Date.parse(meta.finishedAt) - Date.parse(meta.startedAt)) / 60_000)} min` : 'unfinished'
 
-function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof readRows>>, pending = 0) {
+function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof readRows>>, pending = 0, notRun = 0) {
     const run = meta.workflowRun
     const runLink = run ? `[workflow run #${run.id}](${run.url})` : 'a local run'
     const setupLabel = (setup: string) => {
@@ -87,7 +104,11 @@ function renderReport (id: string, meta: Meta, rows: Awaited<ReturnType<typeof r
     const suite = meta.suite
     const taskList = `${meta.tasks.length} tasks sampled from Online-Mind2Web (ids in [\`tasks/online-mind2web.json\`](${REPO_URL}/blob/main/tasks/online-mind2web.json)); live websites, so runs are not exactly repeatable`
     const judge = rows.find((r) => (r as { judge?: Record<string, unknown> }).judge) as { judge?: { name: string, model: string, threshold: number, commit: string, patch: string } } | undefined
-    const pendingNote = pending ? `\n\n⚠️ ${pending} run(s) were not judged and are left out of every number below.` : ''
+    const pendingNote = (pending ? `\n\n⚠️ ${pending} run(s) were not judged and are left out of every number below.` : '') +
+        (notRun ? `\n\n⚠️ ${notRun} of ${meta.planned} planned run(s) did not run: their job reached its time limit first, or failed.` : '')
+    const mismatch = Object.entries(meta.versionMismatch ?? {})
+    const mismatchNote = mismatch.length ? `\n\n⚠️ Shards installed different versions of ${mismatch.map(([setup, v]) => `\`${setup}\` (${v.map((x) => `\`${x}\``).join(', ')})`).join(', ')}: a release came out while the run started. The table shows the first shard's.` : ''
+    const sharded = Object.keys(meta.environments ?? {}).some((k) => k.startsWith('shard '))
 
     return `# Benchmark run ${id}: ${SUITES[suite].label}
 
@@ -113,7 +134,7 @@ How the tasks, setups and checks work, and what we do to keep the comparison fai
 
 | Setup | Tool | Package | Version | Status |
 |---|---|---|---|---|
-${tools.join('\n')}
+${tools.join('\n')}${mismatchNote}
 
 ## Results${pendingNote}
 
@@ -129,11 +150,13 @@ ${failureList(rows)}
 
 ## Environment
 
-| Setup | OS | CPU | Node.js | Chrome |
+| ${sharded ? 'Job' : 'Setup'} | OS | CPU | Node.js | Chrome |
 |---|---|---|---|---|
 ${Object.entries(meta.environments ?? { all: meta.environment }).map(([setup, e]) => `| \`${setup}\` | ${e.os} | ${e.cpus} | ${e.node} | ${e.chrome} |`).join('\n')}
 
-Every setup ran in the same job, interleaved in one shuffled order.
+${sharded
+        ? `The tasks were split into ${Object.keys(meta.environments!).length} shards, one job and runner each. Every setup ran every task of a shard in that shard's job, interleaved in one shuffled order, so the setups on one task shared an IP address and a time window.`
+        : 'Every setup ran in the same job, interleaved in one shuffled order.'}
 `
 }
 
@@ -215,9 +238,11 @@ const resultDir = path.resolve(dir)
 const id = path.basename(resultDir)
 const meta = await mergeMeta(resultDir)
 const rows = await readRows(resultDir)
-const pending = (await readRows(resultDir, { includePending: true })).length - rows.length
+const all = (await readRows(resultDir, { includePending: true })).length
+const pending = all - rows.length
+const notRun = meta.planned === undefined ? 0 : Math.max(0, meta.planned - all)
 await fs.writeFile(path.join(resultDir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n')
-await fs.writeFile(path.join(resultDir, 'report.md'), renderReport(id, meta, rows, pending))
+await fs.writeFile(path.join(resultDir, 'report.md'), renderReport(id, meta, rows, pending, notRun))
 const latest = await renderIndex()
 if (latest.length) {
     await updateReadme(latest)

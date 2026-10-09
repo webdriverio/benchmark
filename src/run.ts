@@ -1,5 +1,5 @@
 /**
- * node src/run.ts [--suite online-mind2web] [--setups a,b] [--tasks x,y] [--runs 1] [--model claude-sonnet-5] [--seed 1] [--out-dir results/<id>] [--dry-run]
+ * node src/run.ts [--suite online-mind2web] [--setups a,b] [--tasks x,y] [--runs 1] [--model claude-sonnet-5] [--seed 1] [--out-dir results/<id>] [--shard 01] [--deadline-min 300] [--dry-run]
  *
  * Installs the tool behind every selected setup, then runs every
  * setup × task × repetition once in one shuffled order (fixed seed, so a
@@ -9,8 +9,11 @@
  *   steps-<label>.jsonl  per run, what the agent did step by step (see steps.ts)
  *   meta-<label>.json    model, versions, environment, workflow run link
  *
- * `node src/publish.ts <out-dir>` merges those into meta.json and report.md.
- * The workflow runs every setup in one job and publishes when it is done.
+ * With --shard, <label> ends in `-s<shard>`, so the files of several jobs
+ * can share one directory. `node src/publish.ts <out-dir>` merges those into
+ * meta.json and report.md. The workflow splits the tasks into shards, one job
+ * each, runs every setup in every shard (see plan.ts) and publishes when all
+ * are done.
  */
 import fs from 'node:fs/promises'
 import os from 'node:os'
@@ -50,6 +53,11 @@ const { values: args } = parseArgs({
         // runs at the same time; parallel browsers compete for CPU, so time
         // per task rises with it
         concurrency: { type: 'string', default: '1' },
+        // this job's part of a sharded run (see plan.ts): names its files and runs
+        shard: { type: 'string' },
+        // start no run after this many minutes; the runs going finish, the
+        // rest are left out and the report says how many
+        'deadline-min': { type: 'string' },
         // a screenshot after every tool call; always on for suites judged from screenshots
         screenshots: { type: 'boolean', default: false },
         'dry-run': { type: 'boolean', default: false }
@@ -126,7 +134,14 @@ const selected = pick(SETUPS, args.setups)
 const tasks = pick(await loadTasks(suite), args.tasks)
 // live tasks are judged from what the agent saw
 args.screenshots ||= tasks.some((t) => t.kind === 'live')
-const label = args.setups === 'all' ? 'all' : selected.map((s) => s.id).join('+')
+if (args.shard !== undefined && !/^\d{1,3}$/.test(args.shard)) {
+    throw new Error(`--shard must be a number like 01, got "${args.shard}"`)
+}
+const deadlineMin = args['deadline-min'] === undefined ? undefined : Number(args['deadline-min'])
+if (deadlineMin !== undefined && !(deadlineMin > 0)) {
+    throw new Error(`--deadline-min must be a positive number of minutes, got "${args['deadline-min']}"`)
+}
+const label = (args.setups === 'all' ? 'all' : selected.map((s) => s.id).join('+')) + (args.shard ? `-s${args.shard}` : '')
 const startedAt = new Date()
 const outDir = path.resolve(args['out-dir'] ?? path.join(ROOT, 'results', startedAt.toISOString().slice(0, 19).replace(/:/g, '-')))
 
@@ -179,6 +194,9 @@ const meta = {
     ...(model.provider !== 'anthropic' && { provider: { name: model.provider, model: model.apiModel, pricingUsdPerToken: pricing } }),
     runsPerTask: Number(args.runs),
     seed: Number(args.seed),
+    ...(args.shard && { shard: args.shard }),
+    /** runs in the plan; fewer ran when the deadline came first */
+    planned: plan.length,
     maxTurns: Number(args['max-turns']),
     timeoutMin: Number(args['timeout-min']),
     tasks: tasks.map((t) => t.id),
@@ -202,8 +220,9 @@ const startedMs = startedAt.getTime()
 let done = 0
 async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
     const tool = tools.get(setup.id)!
-    // doubles as the wdio session name: letters, digits, `-`, at most 64
-    const runId = `${setup.id}-${startedMs}-${String(i + 1).padStart(3, '0')}`
+    // doubles as the wdio session name: letters, digits, `-`, at most 64;
+    // the shard keeps it unique across the jobs of one run
+    const runId = `${setup.id}-${startedMs}-${args.shard ? `s${args.shard}-` : ''}${String(i + 1).padStart(3, '0')}`
     const cwd = path.join(ROOT, '.runs', runId)
     await fs.mkdir(cwd, { recursive: true })
 
@@ -348,12 +367,16 @@ async function runOne (i: number, { setup, task, rep }: typeof plan[number]) {
 }
 
 const queue = [...plan.entries()]
+const deadline = deadlineMin === undefined ? Infinity : startedMs + deadlineMin * 60_000
 await Promise.all(Array.from({ length: Math.max(1, Number(args.concurrency)) }, async () => {
-    for (let next = queue.shift(); next; next = queue.shift()) {
+    for (let next = queue.shift(); next && Date.now() < deadline; next = queue.shift()) {
         await runOne(...next)
     }
 }))
 
+if (done < plan.length) {
+    console.log(`\nDeadline of ${deadlineMin} min reached: ${plan.length - done} of ${plan.length} runs did not start`)
+}
 meta.finishedAt = new Date().toISOString()
 await fs.writeFile(metaFile, JSON.stringify(meta, null, 2) + '\n')
 const judgeHint = tasks.some((t) => t.kind === 'live') ? `\nJudge: node src/judge.ts ${path.relative(ROOT, outDir)} (needs OPENAI_API_KEY)` : ''
