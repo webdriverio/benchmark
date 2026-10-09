@@ -1,0 +1,84 @@
+{
+  "suite": "online-mind2web",
+  "screenshots": true,
+  "startedAt": "2026-10-09T03:19:08.882Z",
+  "model": "deepseek-flash-4-1",
+  "provider": {
+    "name": "openrouter",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "pricingUsdPerToken": {
+      "input": 3e-7,
+      "output": 0.0000012,
+      "cacheRead": 6e-9,
+      "cacheWrite": 3e-7
+    }
+  },
+  "runsPerTask": 1,
+  "seed": 1,
+  "shard": "08",
+  "planned": 70,
+  "maxTurns": 80,
+  "timeoutMin": 10,
+  "tasks": [
+    "om2w-d71be72a",
+    "om2w-ade4c09a",
+    "om2w-9d46ccb9",
+    "om2w-84f806c7",
+    "om2w-7072d094",
+    "om2w-43a1ca25",
+    "om2w-9d09bc94",
+    "om2w-ba01ea55",
+    "om2w-f2be37a9",
+    "om2w-b64f938a"
+  ],
+  "setups": {
+    "playwright-mcp": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "playwright-mcp-tuned": {
+      "pkg": "@playwright/mcp",
+      "version": "0.0.83",
+      "url": "https://www.npmjs.com/package/@playwright/mcp/v/0.0.83"
+    },
+    "stagehand": {
+      "pkg": "browserbase/stagehand",
+      "version": "4.1.0+cd7b230",
+      "url": "https://github.com/browserbase/stagehand/tree/cd7b230778cf92269e4cb90e80d97f5113781c51"
+    },
+    "wdio-mcp": {
+      "pkg": "@wdio/mcp",
+      "version": "4.0.0",
+      "url": "https://www.npmjs.com/package/@wdio/mcp/v/4.0.0"
+    },
+    "wdio-session": {
+      "pkg": "@wdio/cli",
+      "version": "10.0.2",
+      "url": "https://www.npmjs.com/package/@wdio/cli/v/10.0.2"
+    },
+    "agent-browser": {
+      "pkg": "agent-browser",
+      "version": "0.38.2",
+      "url": "https://www.npmjs.com/package/agent-browser/v/0.38.2"
+    },
+    "playwright-cli": {
+      "pkg": "@playwright/cli",
+      "version": "0.1.22",
+      "url": "https://www.npmjs.com/package/@playwright/cli/v/0.1.22"
+    }
+  },
+  "workflowRun": {
+    "url": "https://github.com/webdriverio/benchmark/actions/runs/37878674146",
+    "id": "37878674146",
+    "attempt": "1"
+  },
+  "commit": "40269cf6a7081cf52d4b11a0ec8a1db514a84ce0",
+  "environment": {
+    "os": "Linux 6.17.0-1022-azure (x64)",
+    "cpus": "4× Intel(R) Xeon(R) 6973P-C",
+    "node": "v24.21.0",
+    "chrome": "Google Chrome 154.0.8037.97",
+    "agentSdk": "0.3.288"
+  }
+}

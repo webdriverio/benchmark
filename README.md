@@ -19,21 +19,21 @@ This repository runs a fixed sample of 100 tasks from [Online-Mind2Web](https://
 ## Latest results
 
 <!-- results:start -->
-**Online-Mind2Web, DeepSeek V4.1 Flash.** Latest run: [2026-10-05-run-37268739610](results/2026-10-05-run-37268739610/report.md) on 2026-10-05, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37268739610).
+**Online-Mind2Web, DeepSeek V4.1 Flash.** Latest run: [2026-10-09-run-37878674146](results/2026-10-09-run-37878674146/report.md) on 2026-10-09, `deepseek-flash-4-1`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37878674146).
 
 | Setup | Tokens/task | Cost/task | Success | Time/task | Tool calls/task |
 |---|--:|--:|--:|--:|--:|
-| playwright-mcp | 479k | $0.030 | 46% (23/50) | 155 s | 28 |
-| playwright-mcp-tuned | 546k | $0.032 | 52% (26/50) | 116 s | 25 |
-| stagehand | 336k | $0.023 | 64% (32/50) | 108 s | 25 |
-| wdio-mcp | 292k | $0.019 | 56% (28/50) | 128 s | 27.5 |
-| wdio-session | 165k | $0.013 | 50% (25/50) | 158 s | 28 |
-| agent-browser | 816k | $0.036 | 42% (21/50) | 187 s | 41.5 |
-| playwright-cli | 620k | $0.031 | 60% (30/50) | 173 s | 38.5 |
+| playwright-mcp | 515k | $0.028 | 57% (32/56) | 87 s | 26 |
+| playwright-mcp-tuned | 507k | $0.027 | 56% (36/64) | 116 s | 27.5 |
+| stagehand | 405k | $0.027 | 67% (35/52) | 103 s | 24.5 |
+| wdio-mcp | 259k | $0.016 | 67% (44/66) | 100 s | 29 |
+| wdio-session | 229k | $0.014 | 69% (45/65) | 171 s | 26 |
+| agent-browser | 730k | $0.038 | 57% (37/65) | 132 s | 31 |
+| playwright-cli | 742k | $0.034 | 51% (22/43) | 202 s | 39 |
 
 _Medians per run, except success. Tokens include cache reads and writes._
 
-Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0-dev.64` · wdio-session: `@wdio/cli@10.0.0-alpha.175` · agent-browser: `agent-browser@0.38.2` · playwright-cli: `@playwright/cli@0.1.22`
+Versions: playwright-mcp: `@playwright/mcp@0.0.83` · playwright-mcp-tuned: `@playwright/mcp@0.0.83` · stagehand: `browserbase/stagehand@4.1.0+cd7b230` · wdio-mcp: `@wdio/mcp@4.0.0` · wdio-session: `@wdio/cli@10.0.2` · agent-browser: `agent-browser@0.38.2` · playwright-cli: `@playwright/cli@0.1.22`
 
 **Online-Mind2Web, Claude Sonnet 5.** Latest run: [2026-10-05-run-37268732268](results/2026-10-05-run-37268732268/report.md) on 2026-10-05, `claude-sonnet-5`, 1 runs per task, [workflow run](https://github.com/webdriverio/benchmark/actions/runs/37268732268).
 
